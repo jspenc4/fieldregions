@@ -97,6 +97,15 @@ Critical performance component - called millions of times in nested loops:
 
 ## Visualization
 
+### 3D Population Potential Surfaces
+See **[3D Visualization Documentation](3d-visualization.md)** for the latest work on terrain-like visualizations.
+
+Key features:
+- Population appears as Mt. Fuji-shaped peaks
+- Multiple force laws (gravity 1/d² vs social cohesion 1/d⁴)
+- Interactive HTML visualizations and 3D-printable models
+- 500-900× performance improvement through NumPy vectorization
+
 ### Spider Web Animation
 The clustering process creates compelling visual narratives:
 - Major population centers appear as bright nodes

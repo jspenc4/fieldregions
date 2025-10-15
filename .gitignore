@@ -14,10 +14,14 @@ out/
 
 # Large output files (can be regenerated)
 output/*.html
+output/*.obj
+output/*.log
+output/*.csv
 
 # Large visualization files
 res/*.png
 res/*.json
+res/*.jpg
 
 # Data and results files
 res/*.csv
