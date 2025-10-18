@@ -8,6 +8,21 @@ out/
 
 # Python virtual environment
 .venv/
+venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Personal/sensitive docs
+docs/personal/
 
 # OS files
 .DS_Store

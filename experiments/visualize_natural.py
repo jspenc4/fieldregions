@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""
+Generate HTML visualization from natural topological sampling.
+"""
+
+import numpy as np
+import plotly.graph_objects as go
+import sys
+from pathlib import Path
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python3 visualize_natural.py <output_dir> [region_name]")
+        print("Example: python3 visualize_natural.py output/sfbay_natural 'SF Bay Area'")
+        sys.exit(1)
+
+    output_dir = Path(sys.argv[1])
+    region_name = sys.argv[2] if len(sys.argv) > 2 else output_dir.name
+
+    # Load potential data
+    potential_file = output_dir / 'census_tract_potential.csv'
+    print(f"Loading {potential_file}...")
+    data = np.loadtxt(potential_file, delimiter=',', skiprows=1)
+    lons = data[:, 0]
+    lats = data[:, 1]
+    potentials = data[:, 2]
+
+    # Load triangulation
+    tri_file = output_dir / 'triangulation.csv'
+    print(f"Loading {tri_file}...")
+    simplices = np.loadtxt(tri_file, delimiter=',', skiprows=1, dtype=int)
+
+    print(f"Points: {len(lons):,}")
+    print(f"Triangles: {len(simplices):,}")
+    print(f"Potential range: {potentials.min():.2e} to {potentials.max():.2e}")
+
+    # Z scaling: LINEAR (dramatic peaks)
+    p_shifted = potentials - potentials.min()
+    lon_range = lons.max() - lons.min()
+    z_normalized = p_shifted / p_shifted.max()
+    z_scaled = z_normalized * (lon_range * 0.08)
+
+    # Color scaling: LOG (reveal detail)
+    color_values = np.log10(p_shifted + 1)
+    color_normalized = color_values / color_values.max()
+
+    print(f"Z range: {z_scaled.min():.4f} to {z_scaled.max():.4f}")
+    print(f"Color range: {color_normalized.min():.4f} to {color_normalized.max():.4f}")
+
+    # Create figure with Viridis colorscale
+    print("Creating figure...")
+    fig = go.Figure(data=[go.Mesh3d(
+        x=lons,
+        y=lats,
+        z=z_scaled,
+        i=simplices[:, 0],
+        j=simplices[:, 1],
+        k=simplices[:, 2],
+        intensity=color_normalized,
+        colorscale='Viridis',
+        showscale=True,
+        colorbar=dict(title='Log(Potential)'),
+        lighting=dict(ambient=0.4, diffuse=0.8, specular=0.3),
+        flatshading=False,
+        hoverinfo='skip'
+    )])
+
+    # Camera: north view (looking from south)
+    camera = dict(eye=dict(x=0, y=-2.0, z=0.8))
+
+    fig.update_layout(
+        title=f"{region_name} - Natural Topological Sampling (Linear Z + Log Color)",
+        scene=dict(
+            xaxis=dict(title='Longitude (°)', showgrid=True, visible=True),
+            yaxis=dict(title='Latitude (°)', showgrid=True, visible=True),
+            zaxis=dict(title='Population Potential', showgrid=False, visible=True),
+            aspectmode='data',
+            camera=camera,
+            bgcolor='white'
+        ),
+        width=1400,
+        height=900,
+        paper_bgcolor='white',
+        margin=dict(l=0, r=0, t=40, b=0)
+    )
+
+    # Save HTML
+    output_path = output_dir / f'{output_dir.name}_natural.html'
+    print(f"Saving to {output_path}...")
+    fig.write_html(output_path)
+    print(f"Done! Open with: open {output_path}")
+
+if __name__ == '__main__':
+    main()

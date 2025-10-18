@@ -2,9 +2,11 @@
 """
 Generate interactive 3D surface visualization from gravitational potential data.
 
-Reads newPot3.csv and creates an interactive HTML visualization using Plotly.
+Usage: python3 generate_3d_surface.py [input_csv]
+If no argument provided, uses ~/git/gridded/res/newPot3.csv
 """
 
+import sys
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -47,13 +49,61 @@ def reshape_to_grid(df):
 
     return lon_grid, lat_grid, potential_grid
 
+def export_obj(lon_grid, lat_grid, z_grid, output_path, z_scale=1.0):
+    """Export surface mesh as Wavefront OBJ file."""
+    print(f"Exporting OBJ to {output_path}...")
+
+    nrows, ncols = lon_grid.shape
+
+    with open(output_path, 'w') as f:
+        # Write header
+        f.write("# Population Gravitational Potential Surface\n")
+        f.write(f"# Grid: {nrows} rows × {ncols} cols\n")
+        f.write(f"# Generated from potential field data\n\n")
+
+        # Write vertices (v x y z)
+        vertex_count = 0
+        vertex_map = {}
+        for i in range(nrows):
+            for j in range(ncols):
+                if not (np.isnan(lon_grid[i,j]) or np.isnan(lat_grid[i,j]) or np.isnan(z_grid[i,j])):
+                    x = lon_grid[i,j]
+                    y = lat_grid[i,j]
+                    z = z_grid[i,j] * z_scale
+                    f.write(f"v {x:.6f} {y:.6f} {z:.6f}\n")
+                    vertex_map[(i,j)] = vertex_count + 1  # OBJ is 1-indexed
+                    vertex_count += 1
+
+        f.write(f"\n# {vertex_count} vertices\n\n")
+
+        # Write faces (f v1 v2 v3 v4 for quads)
+        face_count = 0
+        for i in range(nrows-1):
+            for j in range(ncols-1):
+                # Check if all 4 corners exist
+                if ((i,j) in vertex_map and (i,j+1) in vertex_map and
+                    (i+1,j+1) in vertex_map and (i+1,j) in vertex_map):
+                    # Write quad face (counter-clockwise winding)
+                    v1 = vertex_map[(i,j)]
+                    v2 = vertex_map[(i,j+1)]
+                    v3 = vertex_map[(i+1,j+1)]
+                    v4 = vertex_map[(i+1,j)]
+                    f.write(f"f {v1} {v2} {v3} {v4}\n")
+                    face_count += 1
+
+        f.write(f"\n# {face_count} faces\n")
+
+    print(f"✓ Exported {vertex_count} vertices, {face_count} faces")
+
 def create_surface_plot(lon_grid, lat_grid, potential_grid, title="World Population Gravitational Potential",
                         camera_eye=None):
     """Create interactive 3D surface plot."""
     print("Creating 3D surface plot...")
 
-    # Normalize potential for better visualization (log scale works well for population data)
-    z_normalized = np.log10(potential_grid + 1)  # +1 to avoid log(0)
+    # Normalize potential for better visualization (double-log for extreme compression)
+    # First log to compress range, second log to further flatten spikes
+    z_temp = np.log10(potential_grid + 1)  # +1 to avoid log(0)
+    z_normalized = np.log10(z_temp + 1)  # Double-log transformation
 
     # Calculate aspect ratio to make grid squares appear square when viewed from above
     # At equator, 1 degree lon = 1 degree lat in distance
@@ -84,7 +134,7 @@ def create_surface_plot(lon_grid, lat_grid, potential_grid, title="World Populat
         z=z_normalized,
         colorscale='Viridis',
         colorbar=dict(
-            title=dict(text="log₁₀(Potential)", side="right"),
+            title=dict(text="log₁₀(log₁₀(Potential))", side="right"),
             tickmode="linear",
         ),
         lighting=dict(
@@ -110,7 +160,7 @@ def create_surface_plot(lon_grid, lat_grid, potential_grid, title="World Populat
         scene=dict(
             xaxis_title='Longitude',
             yaxis_title='Latitude',
-            zaxis_title='log₁₀(Gravitational Potential)',
+            zaxis_title='log₁₀(log₁₀(Potential))',
             camera=dict(
                 eye=camera_eye,
                 up=dict(x=0, y=1, z=0)  # North is up
@@ -251,15 +301,16 @@ def create_guided_tour(lon_grid, lat_grid, potential_grid):
         aspect_y = 1.0
         aspect_z = 0.6  # Vertical exaggeration
 
-        # Create figure
-        z_normalized = np.log10(potential_subset + 1)
+        # Create figure (double-log transformation)
+        z_temp = np.log10(potential_subset + 1)
+        z_normalized = np.log10(z_temp + 1)
 
         fig = go.Figure(data=[go.Surface(
             x=lon_subset,
             y=lat_subset,
             z=z_normalized,
             colorscale='Viridis',
-            colorbar=dict(title=dict(text="log₁₀(Potential)", side="right")),
+            colorbar=dict(title=dict(text="log₁₀(log₁₀(Potential))", side="right")),
             lighting=dict(ambient=0.4, diffuse=0.8, specular=0.2, roughness=0.5, fresnel=0.2)
         )])
 
@@ -290,8 +341,11 @@ def create_guided_tour(lon_grid, lat_grid, potential_grid):
     return tour_figs
 
 def main():
-    # Path to the potential data CSV
-    csv_path = Path.home() / "git" / "gridded" / "res" / "newPot3.csv"
+    # Get input file from command line or use default
+    if len(sys.argv) > 1:
+        csv_path = Path(sys.argv[1])
+    else:
+        csv_path = Path.home() / "git" / "gridded" / "res" / "newPot3.csv"
 
     if not csv_path.exists():
         print(f"ERROR: File not found: {csv_path}")
@@ -302,8 +356,9 @@ def main():
     df = load_potential_data(csv_path)
     lon_grid, lat_grid, potential_grid = reshape_to_grid(df)
 
-    # Create output directory
+    # Create output directories
     Path("output").mkdir(exist_ok=True)
+    Path("output/images").mkdir(exist_ok=True)
 
     # Create visualizations
     print("\n=== Generating World View ===")
@@ -311,6 +366,14 @@ def main():
     world_output = "output/world_surface_3d.html"
     fig_world.write_html(world_output)
     print(f"✓ Saved: {world_output}")
+
+    # Export static image
+    try:
+        world_img = "output/images/world_surface_3d.png"
+        fig_world.write_image(world_img, width=1920, height=1080)
+        print(f"✓ Saved image: {world_img}")
+    except Exception as e:
+        print(f"⚠️  Could not save image (kaleido may not be installed): {e}")
 
     print("\n=== Generating Western Hemisphere View ===")
     fig_west = create_hemisphere_view(lon_grid, lat_grid, potential_grid, 'western')
