@@ -12,12 +12,12 @@ def test_calculate_potential_single_point():
     """Test potential from a single source point."""
     distances = np.array([[10.0]])  # 10 miles away
     weights = np.array([1000.0])
-    
+
     # With force_exponent=3: potential = 1000 / 10^3 = 1.0
     pot = potential.calculate_potential(
-        distances, weights, force_exponent=3, contribution_cap=None
+        distances, weights, force_exponent=3
     )
-    
+
     assert pot[0] == pytest.approx(1.0)
 
 
@@ -26,32 +26,15 @@ def test_calculate_potential_multiple_sources():
     # Sample point distances to 3 sources
     distances = np.array([[10.0, 20.0, 30.0]])
     weights = np.array([1000.0, 2000.0, 3000.0])
-    
+
     # Contributions: 1000/10^3 + 2000/20^3 + 3000/30^3
     # = 1.0 + 0.25 + 0.111... ≈ 1.361
     pot = potential.calculate_potential(
-        distances, weights, force_exponent=3, contribution_cap=None
+        distances, weights, force_exponent=3
     )
-    
+
     expected = 1000/1000 + 2000/8000 + 3000/27000
     assert pot[0] == pytest.approx(expected, rel=0.01)
-
-
-def test_calculate_potential_with_cap():
-    """Test contribution capping."""
-    # Very close point should be capped
-    distances = np.array([[0.01, 10.0]])  # First very close
-    weights = np.array([1000.0, 1000.0])
-    
-    pot = potential.calculate_potential(
-        distances, weights, force_exponent=3, contribution_cap=5000.0
-    )
-    
-    # First contribution would be huge without cap, should be capped
-    # Second contribution: 1000/1000 = 1.0
-    # Total should be 5000 + 1.0 = 5001.0
-    assert pot[0] > 5000.0  # Capped contribution included
-    assert pot[0] < 6000.0  # But not unreasonably large
 
 
 def test_calculate_potential_min_distance():
@@ -65,7 +48,6 @@ def test_calculate_potential_min_distance():
         distances, weights,
         force_exponent=3,
         min_distance_miles=1.0,
-        contribution_cap=None
     )
 
     # First two are clamped to 1.0, others use actual distance
@@ -83,7 +65,6 @@ def test_calculate_potential_max_distance():
         distances, weights,
         force_exponent=3,
         max_distance_miles=50.0,
-        contribution_cap=None
     )
     
     # Should only include first two (within 50 miles)
@@ -144,7 +125,6 @@ def test_calculate_potential_chunked_no_overlap():
     )
     pot_regular = potential.calculate_potential(
         distances, source_weights, force_exponent=3,
-        contribution_cap=None, max_distance_miles=None
     )
 
     # Should match closely when there's no overlap
@@ -236,30 +216,22 @@ def test_calculate_potential_force_exponents():
     weights = np.array([1000.0, 2000.0])
 
     # Test exponent=1 (gravity: 1/d force, 1/d potential)
-    pot1 = potential.calculate_potential(
-        distances, weights, force_exponent=1, contribution_cap=None
-    )
+    pot1 = potential.calculate_potential(distances, weights, force_exponent=1)
     expected1 = 1000.0/10.0 + 2000.0/20.0  # = 100 + 100 = 200
     assert pot1[0] == pytest.approx(expected1, rel=0.01)
 
     # Test exponent=2
-    pot2 = potential.calculate_potential(
-        distances, weights, force_exponent=2, contribution_cap=None
-    )
+    pot2 = potential.calculate_potential(distances, weights, force_exponent=2)
     expected2 = 1000.0/100.0 + 2000.0/400.0  # = 10 + 5 = 15
     assert pot2[0] == pytest.approx(expected2, rel=0.01)
 
     # Test exponent=3 (default: 1/d^4 force, 1/d^3 potential)
-    pot3 = potential.calculate_potential(
-        distances, weights, force_exponent=3, contribution_cap=None
-    )
+    pot3 = potential.calculate_potential(distances, weights, force_exponent=3)
     expected3 = 1000.0/1000.0 + 2000.0/8000.0  # = 1.0 + 0.25 = 1.25
     assert pot3[0] == pytest.approx(expected3, rel=0.01)
 
     # Test exponent=4
-    pot4 = potential.calculate_potential(
-        distances, weights, force_exponent=4, contribution_cap=None
-    )
+    pot4 = potential.calculate_potential(distances, weights, force_exponent=4)
     expected4 = 1000.0/10000.0 + 2000.0/160000.0  # = 0.1 + 0.0125 = 0.1125
     assert pot4[0] == pytest.approx(expected4, rel=0.01)
 

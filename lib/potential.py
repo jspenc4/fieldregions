@@ -4,7 +4,6 @@ import numpy as np
 
 def calculate_potential(distances, weights,
                        force_exponent=3,
-                       contribution_cap=None,
                        max_distance_miles=None,
                        min_distance_miles=0):
     """
@@ -21,8 +20,6 @@ def calculate_potential(distances, weights,
         Weights (populations) of source points
     force_exponent : int
         Exponent for 1/d^n potential (default: 3)
-    contribution_cap : float or None
-        Cap individual contributions to prevent singularities (default: None)
     max_distance_miles : float or None
         Zero contribution beyond this distance (default: None)
     min_distance_miles : float
@@ -50,10 +47,6 @@ def calculate_potential(distances, weights,
 
     # Exclude self-contributions (set to zero)
     contributions = np.where(is_self, 0.0, contributions)
-
-    # Apply contribution cap if specified
-    if contribution_cap is not None:
-        contributions = np.minimum(contributions, contribution_cap)
 
     # Apply max distance cutoff if specified
     if max_distance_miles is not None:

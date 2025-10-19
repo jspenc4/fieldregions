@@ -209,7 +209,6 @@ potentials = potential.calculate_potential(
     distances,
     weights,
     force_exponent=3,
-    contribution_cap=None,       # Cap individual contributions
     max_distance_miles=100,      # Zero contribution beyond distance
     min_distance_miles=1.0       # Smooth census noise
 )
