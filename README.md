@@ -87,16 +87,29 @@ Cosine lookup table for latitudes 0-89° avoids repeated trig calculations.
 ## Project Structure
 
 ```
-src/com/jimspencer/
-├── Tracts.java        # Main clustering algorithm with caching
-├── Tract.java         # Individual tract or merged region
-├── SpiderMap.java     # Alternative edge-based approach
-├── MapEdge.java       # Adjacency between tracts
-└── Region.java        # Region merging by boundary distance
+lib/                        # Python library (NEW)
+├── constants.py            # Earth distance constants
+├── geometry.py             # Distance calculations (cosine-corrected, haversine)
+├── potential.py            # Potential field calculation (chunked, vectorized)
+└── io.py                   # CSV loading utilities
+
+tests/                      # Python test suite (NEW)
+├── test_geometry.py        # Distance function tests
+├── test_potential.py       # Potential calculation tests
+├── test_io.py              # File I/O tests
+└── test_regression.py      # Regression baselines
+
+src/com/jimspencer/         # Original Java implementation
+├── Tracts.java             # Main clustering algorithm with caching
+├── Tract.java              # Individual tract or merged region
+├── SpiderMap.java          # Alternative edge-based approach
+├── MapEdge.java            # Adjacency between tracts
+└── Region.java             # Region merging by boundary distance
 
 res/
 ├── censusTracts.csv        # Input: US census tract data
 ├── treeOutput.csv          # Output: sequential merge records
+├── tracts_sf_bay.csv       # SF Bay Area subset for testing
 ├── 74k_us.pdf              # US spider web visualization
 ├── worldPrintMap.pdf       # World spider web (colored)
 ├── 3dsurface.png           # 3D potential surface
@@ -109,7 +122,86 @@ docs/
 
 ## Usage
 
-### Running the Clustering Algorithm
+### Python Library (Recommended)
+
+**Installation:**
+```bash
+# Install dependencies
+pip install numpy scipy pandas pytest
+
+# Run tests
+pytest tests/ -v
+```
+
+**Basic Usage:**
+```python
+from lib import io, potential, geometry
+
+# Load census data
+df = io.load_csv('res/tracts_sf_bay.csv')
+lons = df['LONGITUDE'].values
+lats = df['LATITUDE'].values
+weights = df['POPULATION'].values
+
+# Calculate population potential at each census tract
+# Uses 1/d³ potential (from 1/d⁴ force law)
+potentials = potential.calculate_potential_chunked(
+    sample_lons=lons,
+    sample_lats=lats,
+    source_lons=lons,
+    source_lats=lats,
+    source_weights=weights,
+    distance_fn=geometry.cos_corrected_distance,
+    force_exponent=3,
+    chunk_size=1000  # Process 1000 points at a time
+)
+
+print(f"Potential range: {potentials.min():.0f} to {potentials.max():.0f}")
+```
+
+**API Reference:**
+
+`calculate_potential_chunked(sample_lons, sample_lats, source_lons, source_lats, source_weights, distance_fn, force_exponent=3, chunk_size=1000, min_distance_miles=0.0, max_distance_miles=None)`
+
+- **sample_lons/lats**: Where to calculate potential (e.g., triangle centers, census tracts)
+- **source_lons/lats/weights**: Population sources (census tracts with populations)
+- **distance_fn**: `cos_corrected_distance` (fast) or `haversine_distance` (accurate)
+- **force_exponent**: 1 for gravity (1/d), 3 for social cohesion (1/d³), etc.
+- **chunk_size**: Memory management (1000 works for 48GB RAM with 72k points)
+- **min_distance_miles**: Smooth noise by clamping distances (e.g., 1.0 mile for census centroids)
+- **max_distance_miles**: Limit to local influences (e.g., 50-100 miles)
+
+**Distance Functions:**
+- `cos_corrected_distance`: Fast approximation using cosine correction (~3× faster)
+- `haversine_distance`: Accurate great-circle distance (use for scientific work)
+
+**Smoothing Census Centroid Noise:**
+```python
+# Census tract centroids are approximate (±0.5-1 mile error)
+# Use min_distance_miles to smooth this noise
+potentials = potential.calculate_potential_chunked(
+    lons, lats, lons, lats, weights,
+    geometry.cos_corrected_distance,
+    force_exponent=3,
+    min_distance_miles=1.0  # Treat anything <1 mile as 1 mile away
+)
+```
+
+**Advanced Options (pre-computed distances):**
+```python
+# For custom workflows, use pre-computed distance matrix
+distances = geometry.cos_corrected_distance(sample_lons, sample_lats, source_lons, source_lats)
+potentials = potential.calculate_potential(
+    distances,
+    weights,
+    force_exponent=3,
+    contribution_cap=None,       # Cap individual contributions
+    max_distance_miles=100,      # Zero contribution beyond distance
+    min_distance_miles=1.0       # Smooth census noise
+)
+```
+
+### Java Implementation (Original)
 
 ```bash
 # Compile

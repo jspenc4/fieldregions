@@ -1,0 +1,36 @@
+"""Regression tests against verified baselines."""
+import pytest
+import numpy as np
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from lib import io, potential, geometry
+
+
+def test_sf_bay_regression():
+    """Ensure SF Bay results match verified baseline."""
+    # Load data
+    df = io.load_csv('res/tracts_sf_bay.csv')
+    lons = df['LONGITUDE'].values
+    lats = df['LATITUDE'].values
+    weights = df['POPULATION'].values
+
+    # Calculate potential
+    potentials = potential.calculate_potential_chunked(
+        lons, lats, lons, lats, weights,
+        geometry.cos_corrected_distance,
+        force_exponent=3
+    )
+    
+    # Load baseline
+    baseline = np.load('test_data/baseline_sf_bay.npy')
+    
+    # Should match exactly (or very close due to floating point)
+    np.testing.assert_allclose(potentials, baseline, rtol=1e-6)
+    
+    # Sanity checks on magnitudes
+    assert potentials.min() > 0
+    assert potentials.max() < 20_000_000  # Peak near Tenderloin ~10M
+    assert potentials.mean() > 100_000
+    assert potentials.mean() < 500_000

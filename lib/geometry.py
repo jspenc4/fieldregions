@@ -1,45 +1,86 @@
 """Geometric calculations: distances, triangulation."""
 import numpy as np
 from scipy.spatial import Delaunay
+from .constants import MILES_PER_DEGREE, EARTH_RADIUS_MILES
 
 
-def calculate_distances(sample_lons, sample_lats, source_lons, source_lats, avg_lat):
+def cos_corrected_distance(sample_lons, sample_lats, source_lons, source_lats, avg_lat=None):
     """
-    Calculate pairwise distances between sample and source points.
-    
-    Uses cosine-corrected Euclidean distance (fast approximation).
-    
+    Calculate distances using cosine-corrected Euclidean approximation.
+
+    Fast and accurate enough for visualization. Uses average latitude
+    for cosine correction.
+
     Parameters
     ----------
-    sample_lons : ndarray (N,)
-        Longitudes of sample points
-    sample_lats : ndarray (N,)
-        Latitudes of sample points
-    source_lons : ndarray (M,)
-        Longitudes of source points
-    source_lats : ndarray (M,)
-        Latitudes of source points
-    avg_lat : float
-        Average latitude for cosine correction
-        
+    sample_lons, sample_lats : ndarray (N,)
+        Sample point coordinates
+    source_lons, source_lats : ndarray (M,)
+        Source point coordinates
+    avg_lat : float, optional
+        Average latitude for cosine correction. If None, calculated from all points.
+
     Returns
     -------
     ndarray (N, M)
         Distance matrix in miles
     """
+    # Auto-calculate average latitude if not provided
+    if avg_lat is None:
+        all_lats = np.concatenate([sample_lats, source_lats])
+        avg_lat = np.mean(all_lats)
+
     cos_avg_lat = np.cos(np.radians(avg_lat))
-    
+
     # Broadcast to get all pairwise distances
-    # sample_lons[:, newaxis] creates (N, 1)
-    # source_lons[newaxis, :] creates (1, M)
-    # Result is (N, M)
     dlon = (sample_lons[:, np.newaxis] - source_lons[np.newaxis, :]) * cos_avg_lat
     dlat = sample_lats[:, np.newaxis] - source_lats[np.newaxis, :]
-    
+
     # Euclidean distance in degrees, convert to miles
-    distances = np.sqrt(dlon**2 + dlat**2) * 69.0
-    
+    distances = np.sqrt(dlon**2 + dlat**2) * MILES_PER_DEGREE
+
     return distances
+
+
+def haversine_distance(sample_lons, sample_lats, source_lons, source_lats):
+    """
+    Calculate distances using the Haversine formula.
+
+    Most accurate for geographic coordinates but ~3x slower than cosine-corrected.
+    Use when accuracy is critical.
+
+    Parameters
+    ----------
+    sample_lons, sample_lats : ndarray (N,)
+        Sample point coordinates
+    source_lons, source_lats : ndarray (M,)
+        Source point coordinates
+
+    Returns
+    -------
+    ndarray (N, M)
+        Distance matrix in miles
+    """
+    # Earth radius in miles
+    R = EARTH_RADIUS_MILES
+
+    # Convert to radians
+    lat1 = np.radians(sample_lats[:, np.newaxis])
+    lat2 = np.radians(source_lats[np.newaxis, :])
+    lon1 = np.radians(sample_lons[:, np.newaxis])
+    lon2 = np.radians(source_lons[np.newaxis, :])
+
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    distances = R * c
+
+    return distances
+
+
 
 
 def triangulate(points):
