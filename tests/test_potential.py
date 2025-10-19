@@ -340,3 +340,70 @@ def test_calculate_potential_different_sample_source():
     # All potentials should be finite and positive
     assert np.all(np.isfinite(pot_fast))
     assert np.all(pot_fast > 0)
+
+
+def test_calculate_potential_chunked_max_distance():
+    """Test max_distance_miles parameter in chunked calculation."""
+    # Points at various distances - use close sources where cutoff matters
+    sample_lons = np.array([-122.0])
+    sample_lats = np.array([37.0])
+    source_lons = np.array([-122.0, -122.02, -122.05, -122.2])  # 0, 1.4, 3.5, 14 miles
+    source_lats = np.array([37.0, 37.0, 37.0, 37.0])
+    source_weights = np.array([1000.0, 1000.0, 1000.0, 1000.0])
+
+    # No distance limit
+    pot_unlimited = potential.calculate_potential_chunked(
+        sample_lons, sample_lats,
+        source_lons, source_lats, source_weights,
+        geometry.cos_corrected_distance,
+        force_exponent=3
+    )
+
+    # Limit to 5 miles (excludes the 14-mile source)
+    pot_limited = potential.calculate_potential_chunked(
+        sample_lons, sample_lats,
+        source_lons, source_lats, source_weights,
+        geometry.cos_corrected_distance,
+        force_exponent=3,
+        max_distance_miles=5.0
+    )
+
+    # Limited should exclude the farthest source
+    assert pot_limited[0] < pot_unlimited[0]
+
+    # Verify parameters are working (any difference proves it)
+    assert abs(pot_unlimited[0] - pot_limited[0]) > 0.001
+
+
+def test_min_distance_vs_no_smoothing():
+    """Test that min_distance actually changes results significantly."""
+    # Create scenario where smoothing matters: very close points
+    sample_lons = np.array([-122.0])
+    sample_lats = np.array([37.0])
+    # Source very close (simulating census tract pair like Las Vegas artifact)
+    source_lons = np.array([-122.0001])  # ~0.02 miles away
+    source_lats = np.array([37.0])
+    source_weights = np.array([10000.0])
+
+    # No smoothing: huge potential from close source
+    pot_no_smooth = potential.calculate_potential_chunked(
+        sample_lons, sample_lats,
+        source_lons, source_lats, source_weights,
+        geometry.cos_corrected_distance,
+        force_exponent=3,
+        min_distance_miles=0.0
+    )
+
+    # With smoothing: clamped to 1 mile
+    pot_smooth = potential.calculate_potential_chunked(
+        sample_lons, sample_lats,
+        source_lons, source_lats, source_weights,
+        geometry.cos_corrected_distance,
+        force_exponent=3,
+        min_distance_miles=1.0
+    )
+
+    # Smoothing should dramatically reduce the potential
+    # 10000 / 0.02^3 = 125,000,000 vs 10000 / 1.0^3 = 10,000
+    assert pot_no_smooth[0] > pot_smooth[0] * 100  # At least 100x difference
+    assert pot_smooth[0] == pytest.approx(10000.0, rel=0.01)  # Clamped to 1 mile
