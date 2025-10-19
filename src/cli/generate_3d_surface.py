@@ -2,7 +2,7 @@
 """
 Generate interactive 3D surface visualization from gravitational potential data.
 
-Usage: python3 generate_3d_surface.py [input_csv]
+Usage: python3 src/cli/generate_3d_surface.py [input_csv]
 If no argument provided, uses ~/git/gridded/res/newPot3.csv
 """
 

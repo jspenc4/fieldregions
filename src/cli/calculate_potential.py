@@ -5,16 +5,22 @@ Population Potential Calculator
 Calculate population potential fields from weighted point datasets.
 
 Usage:
-    python3 calculate_potential.py <input_csv> [min_distance] [max_distance]
+    python3 src/cli/calculate_potential.py <input_csv> [min_distance] [max_distance]
 
 Examples:
-    python3 calculate_potential.py res/tracts_sf_bay.csv
-    python3 calculate_potential.py res/tracts_sf_bay.csv 1.0     # Smooth to 1 mile
-    python3 calculate_potential.py res/tracts_sf_bay.csv 1.0 50  # Smooth + local only
+    python3 src/cli/calculate_potential.py res/tracts_sf_bay.csv
+    python3 src/cli/calculate_potential.py res/tracts_sf_bay.csv 1.0     # Smooth to 1 mile
+    python3 src/cli/calculate_potential.py res/tracts_sf_bay.csv 1.0 50  # Smooth + local only
 """
 import numpy as np
 import sys
 from datetime import datetime
+from pathlib import Path
+
+# Add project root to path so we can import lib
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from lib import io, geometry, potential
 
 

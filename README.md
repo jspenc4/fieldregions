@@ -87,24 +87,38 @@ Cosine lookup table for latitudes 0-89° avoids repeated trig calculations.
 ## Project Structure
 
 ```
-lib/                        # Python library (NEW)
+lib/                        # Python library
 ├── constants.py            # Earth distance constants
 ├── geometry.py             # Distance calculations (cosine-corrected, haversine)
 ├── potential.py            # Potential field calculation (chunked, vectorized)
 └── io.py                   # CSV loading utilities
 
-tests/                      # Python test suite (NEW)
+tests/                      # Python test suite
 ├── test_geometry.py        # Distance function tests
 ├── test_potential.py       # Potential calculation tests
 ├── test_io.py              # File I/O tests
 └── test_regression.py      # Regression baselines
 
-src/com/jimspencer/         # Original Java implementation
-├── Tracts.java             # Main clustering algorithm with caching
-├── Tract.java              # Individual tract or merged region
-├── SpiderMap.java          # Alternative edge-based approach
-├── MapEdge.java            # Adjacency between tracts
-└── Region.java             # Region merging by boundary distance
+src/
+├── cli/                    # Python CLI tools
+│   ├── calculate_potential.py   # Population potential calculator
+│   └── generate_3d_surface.py   # 3D visualization generator
+└── com/jimspencer/         # Java implementation (original)
+    ├── Tracts.java         # Main clustering algorithm with caching
+    ├── Tract.java          # Individual tract or merged region
+    ├── SpiderMap.java      # Alternative edge-based approach
+    ├── MapEdge.java        # Adjacency between tracts
+    └── Region.java         # Region merging by boundary distance
+
+experiments/                # Experimental scripts (organized by category)
+├── 3d_export/              # OBJ, STL, point cloud exports
+├── 3d_print/               # Blender integration, print previews
+├── triangulation/          # Delaunay triangulation utilities
+├── visualization/          # Regional visualizations, color exports
+├── regional_analysis/      # Specific region investigations
+├── triangle_centers/       # Triangle center calculations
+├── exclude_experiments/    # Exclusion parameter experiments
+└── misc/                   # Utility scripts
 
 res/
 ├── censusTracts.csv        # Input: US census tract data
