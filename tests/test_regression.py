@@ -19,7 +19,7 @@ def test_sf_bay_regression():
     # Calculate potential (with min_distance to smooth census centroid noise)
     potentials = potential.calculate_potential_chunked(
         lons, lats, lons, lats, weights,
-        geometry.cos_corrected_distance,
+        geometry.haversine_distance,
         force_exponent=3,
         min_distance_miles=0.5  # Required when sampling at source points
     )
