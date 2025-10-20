@@ -32,21 +32,23 @@ def calculate_potential(distances, weights,
     ndarray (N,)
         Potential values at sample points
     """
-    # Detect self-contribution (exact distance = 0)
-    is_self = (distances == 0)
-
-    # Replace self with dummy value (will be zeroed out anyway)
-    distances_safe = np.where(is_self, 1.0, distances)
-
     # Apply minimum distance clamping if specified
     if min_distance_miles > 0:
-        distances_safe = np.maximum(distances_safe, min_distance_miles)
+        # When smoothing, clamp ALL distances (including self) to min_distance
+        # This treats self-contribution consistently with nearby points
+        distances_safe = np.maximum(distances, min_distance_miles)
+    else:
+        # When not smoothing, exclude self-contribution to avoid division by zero
+        is_self = (distances == 0)
+        distances_safe = np.where(is_self, 1.0, distances)  # Dummy value for self
 
     # Calculate raw contributions: weight / distance^exponent
     contributions = weights[np.newaxis, :] / (distances_safe ** force_exponent)
 
-    # Exclude self-contributions (set to zero)
-    contributions = np.where(is_self, 0.0, contributions)
+    # Exclude self-contributions only when not using min_distance smoothing
+    if min_distance_miles == 0:
+        is_self = (distances == 0)
+        contributions = np.where(is_self, 0.0, contributions)
 
     # Apply max distance cutoff if specified
     if max_distance_miles is not None:
@@ -58,7 +60,6 @@ def calculate_potential(distances, weights,
 
     return potentials
 
-
 def calculate_potential_chunked(sample_lons, sample_lats,
                                 source_lons, source_lats, source_weights,
                                 distance_fn, force_exponent=3, chunk_size=1000,
@@ -66,7 +67,8 @@ def calculate_potential_chunked(sample_lons, sample_lats,
     """
     Calculate potential at sample points from source points using chunked processing.
 
-    Automatically excludes self-contribution when sample point exactly equals source point.
+    When min_distance_miles=0: Excludes self-contribution (distance=0) to avoid singularities.
+    When min_distance_miles>0: Includes self-contribution clamped to min_distance for consistency.
 
     Parameters
     ----------
@@ -124,21 +126,23 @@ def calculate_potential_chunked(sample_lons, sample_lats,
             # Function doesn't take avg_lat parameter (e.g., haversine)
             distances = distance_fn(chunk_lons, chunk_lats, source_lons, source_lats)
 
-        # Detect exact matches (self-contribution to exclude)
-        is_self = (distances == 0)
-
-        # Replace self with dummy value (will be zeroed out anyway)
-        distances_safe = np.where(is_self, 1.0, distances)
-
         # Apply minimum distance clamping if specified
         if min_distance_miles > 0:
-            distances_safe = np.maximum(distances_safe, min_distance_miles)
+            # When smoothing, clamp ALL distances (including self) to min_distance
+            # This treats self-contribution consistently with nearby points
+            distances_safe = np.maximum(distances, min_distance_miles)
+        else:
+            # When not smoothing, exclude self-contribution to avoid division by zero
+            is_self = (distances == 0)
+            distances_safe = np.where(is_self, 1.0, distances)  # Dummy value for self
 
         # Calculate contributions: weight / distance^exponent
         contributions = source_weights[np.newaxis, :] / (distances_safe ** force_exponent)
 
-        # Exclude self-contributions (set to zero)
-        contributions = np.where(is_self, 0.0, contributions)
+        # Exclude self-contributions only when not using min_distance smoothing
+        if min_distance_miles == 0:
+            is_self = (distances == 0)
+            contributions = np.where(is_self, 0.0, contributions)
 
         # Apply max distance cutoff if specified
         if max_distance_miles is not None:

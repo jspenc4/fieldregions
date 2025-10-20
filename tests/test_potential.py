@@ -314,6 +314,33 @@ def test_calculate_potential_different_sample_source():
     assert np.all(pot_fast > 0)
 
 
+def test_self_contribution_with_min_distance():
+    """Test that self-contribution is included when using min_distance smoothing."""
+    # Create a simple case: sample point exactly matches a source point
+    distances = np.array([[0.0, 10.0, 20.0]])  # First source is at same location
+    weights = np.array([1000.0, 1000.0, 1000.0])
+
+    # Without smoothing: self excluded (backward compatible)
+    pot_no_smooth = potential.calculate_potential(
+        distances, weights, force_exponent=3, min_distance_miles=0
+    )
+    # Expected: 0 (self) + 1000/10^3 + 1000/20^3 = 0 + 1.0 + 0.125 = 1.125
+    expected_no_smooth = 1000.0 / (10.0 ** 3) + 1000.0 / (20.0 ** 3)
+    assert pot_no_smooth[0] == pytest.approx(expected_no_smooth, rel=1e-10)
+
+    # With smoothing: self clamped to 1 mile (new behavior)
+    pot_smooth = potential.calculate_potential(
+        distances, weights, force_exponent=3, min_distance_miles=1.0
+    )
+    # Expected: 1000/1.0^3 + 1000/10^3 + 1000/20^3 = 1000 + 1.0 + 0.125 = 1001.125
+    expected_smooth = 1000.0 / (1.0 ** 3) + 1000.0 / (10.0 ** 3) + 1000.0 / (20.0 ** 3)
+    assert pot_smooth[0] == pytest.approx(expected_smooth, rel=1e-10)
+
+    # Smoothing should include self-contribution, making potential much higher
+    assert pot_smooth[0] > pot_no_smooth[0]
+    assert pot_smooth[0] - pot_no_smooth[0] == pytest.approx(1000.0, rel=1e-10)
+
+
 def test_calculate_potential_chunked_max_distance():
     """Test max_distance_miles parameter in chunked calculation."""
     # Points at various distances - use close sources where cutoff matters
