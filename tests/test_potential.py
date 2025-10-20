@@ -133,43 +133,39 @@ def test_calculate_potential_chunked_no_overlap():
 
 
 def test_calculate_potential_chunked_self():
-    """Test that self-contribution is excluded."""
+    """Test that error is raised when sampling at source point without min_distance."""
     # Sample points = source points (calculating at census tract centroids)
-    # Each point should get contribution from the other two, but not itself
     lons = np.array([-122.0, -122.1, -122.2])
     lats = np.array([37.5, 37.6, 37.7])
     weights = np.array([1000.0, 2000.0, 1500.0])
 
+    # Should raise error when min_distance=0 and sampling at source points
+    with pytest.raises(ValueError, match="exactly match source point"):
+        potential.calculate_potential_chunked(
+            lons, lats, lons, lats, weights,
+            geometry.cos_corrected_distance,
+            force_exponent=3,
+            min_distance_miles=0
+        )
+
+    # Should work fine with min_distance > 0
     pot = potential.calculate_potential_chunked(
         lons, lats, lons, lats, weights,
         geometry.cos_corrected_distance,
-        force_exponent=3
+        force_exponent=3,
+        min_distance_miles=0.5
     )
 
-    # All should be finite (self excluded)
+    # All should be finite and positive
     assert np.all(np.isfinite(pot))
-    assert np.all(pot > 0)  # All positive
-
-    # Each point gets contributions from 2 others (not itself)
-    # Verify manually for first point: contribution from points 1 and 2
-    dist_01 = geometry.cos_corrected_distance(
-        np.array([lons[0]]), np.array([lats[0]]),
-        np.array([lons[1]]), np.array([lats[1]])
-    )[0,0]
-    dist_02 = geometry.cos_corrected_distance(
-        np.array([lons[0]]), np.array([lats[0]]),
-        np.array([lons[2]]), np.array([lats[2]])
-    )[0,0]
-    expected_0 = weights[1] / (dist_01 ** 3) + weights[2] / (dist_02 ** 3)
-
-    assert pot[0] == pytest.approx(expected_0, rel=0.001)
+    assert np.all(pot > 0)
 
 
 def test_calculate_potential_chunked_vs_scalar_loop():
     """Test vectorized/chunked calculation matches simple scalar loop."""
-    # Small dataset for scalar loop
-    sample_lons = np.array([-122.0, -122.1, -122.2])
-    sample_lats = np.array([37.5, 37.6, 37.7])
+    # Small dataset for scalar loop - sample points different from source points
+    sample_lons = np.array([-122.02, -122.12, -122.22])  # Offset from sources
+    sample_lats = np.array([37.52, 37.62, 37.72])
     source_lons = np.array([-122.0, -122.05, -122.1, -122.15])
     source_lats = np.array([37.5, 37.55, 37.6, 37.65])
     source_weights = np.array([1000.0, 2000.0, 1500.0, 3000.0])
@@ -191,10 +187,6 @@ def test_calculate_potential_chunked_vs_scalar_loop():
     pot_slow = np.zeros(len(sample_lons))
     for i in range(len(sample_lons)):
         for j in range(len(source_lons)):
-            # Skip self-contribution
-            if sample_lons[i] == source_lons[j] and sample_lats[i] == source_lats[j]:
-                continue
-
             # Calculate distance for this pair using same global avg_lat
             dist = geometry.cos_corrected_distance(
                 np.array([sample_lons[i]]), np.array([sample_lats[i]]),
@@ -239,18 +231,20 @@ def test_calculate_potential_force_exponents():
 def test_calculate_potential_chunked_min_distance():
     """Test min_distance_miles parameter in chunked calculation."""
     # Very close points (simulating census centroid noise)
-    sample_lons = np.array([-122.0, -122.001])  # ~0.05 miles apart
-    sample_lats = np.array([37.0, 37.0])
+    # Offset sample points slightly to avoid exact match with sources
+    sample_lons = np.array([-122.0001, -122.0011])  # Very close to sources
+    sample_lats = np.array([37.0001, 37.0001])
     source_lons = np.array([-122.0, -122.001, -122.1])
     source_lats = np.array([37.0, 37.0, 37.0])
     source_weights = np.array([1000.0, 1000.0, 1000.0])
 
-    # Without smoothing (default min_distance=0)
+    # Without smoothing (very small distance, huge contributions)
     pot_no_smooth = potential.calculate_potential_chunked(
         sample_lons, sample_lats,
         source_lons, source_lats, source_weights,
         geometry.cos_corrected_distance,
-        force_exponent=3
+        force_exponent=3,
+        min_distance_miles=0
     )
 
     # With smoothing (min_distance=1 mile)
@@ -263,7 +257,7 @@ def test_calculate_potential_chunked_min_distance():
     )
 
     # Smoothing should reduce the very large contributions from close points
-    # First point: very close to source 0 (~0 miles) and source 1 (~0.05 miles)
+    # First point: very close to source 0 (~0.01 miles) and source 1 (~0.05 miles)
     # Without smoothing: huge potential
     # With smoothing: capped to 1 mile
     assert pot_no_smooth[0] > pot_smooth[0]
@@ -320,15 +314,13 @@ def test_self_contribution_with_min_distance():
     distances = np.array([[0.0, 10.0, 20.0]])  # First source is at same location
     weights = np.array([1000.0, 1000.0, 1000.0])
 
-    # Without smoothing: self excluded (backward compatible)
-    pot_no_smooth = potential.calculate_potential(
-        distances, weights, force_exponent=3, min_distance_miles=0
-    )
-    # Expected: 0 (self) + 1000/10^3 + 1000/20^3 = 0 + 1.0 + 0.125 = 1.125
-    expected_no_smooth = 1000.0 / (10.0 ** 3) + 1000.0 / (20.0 ** 3)
-    assert pot_no_smooth[0] == pytest.approx(expected_no_smooth, rel=1e-10)
+    # Without smoothing: should raise error
+    with pytest.raises(ValueError, match="exactly match source point"):
+        potential.calculate_potential(
+            distances, weights, force_exponent=3, min_distance_miles=0
+        )
 
-    # With smoothing: self clamped to 1 mile (new behavior)
+    # With smoothing: self clamped to 1 mile (includes self-contribution)
     pot_smooth = potential.calculate_potential(
         distances, weights, force_exponent=3, min_distance_miles=1.0
     )
@@ -336,17 +328,14 @@ def test_self_contribution_with_min_distance():
     expected_smooth = 1000.0 / (1.0 ** 3) + 1000.0 / (10.0 ** 3) + 1000.0 / (20.0 ** 3)
     assert pot_smooth[0] == pytest.approx(expected_smooth, rel=1e-10)
 
-    # Smoothing should include self-contribution, making potential much higher
-    assert pot_smooth[0] > pot_no_smooth[0]
-    assert pot_smooth[0] - pot_no_smooth[0] == pytest.approx(1000.0, rel=1e-10)
-
 
 def test_calculate_potential_chunked_max_distance():
     """Test max_distance_miles parameter in chunked calculation."""
     # Points at various distances - use close sources where cutoff matters
-    sample_lons = np.array([-122.0])
-    sample_lats = np.array([37.0])
-    source_lons = np.array([-122.0, -122.02, -122.05, -122.2])  # 0, 1.4, 3.5, 14 miles
+    # Offset sample point to avoid exact match with first source
+    sample_lons = np.array([-122.001])
+    sample_lats = np.array([37.001])
+    source_lons = np.array([-122.0, -122.02, -122.05, -122.2])  # ~0.1, 1.4, 3.5, 14 miles
     source_lats = np.array([37.0, 37.0, 37.0, 37.0])
     source_weights = np.array([1000.0, 1000.0, 1000.0, 1000.0])
 

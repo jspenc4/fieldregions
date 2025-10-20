@@ -25,30 +25,34 @@ def calculate_potential(distances, weights,
     min_distance_miles : float
         Minimum distance for calculations (default: 0.0).
         Distances smaller than this are clamped to this value.
-        When 0.0, no clamping is applied (self-contribution still excluded).
+        REQUIRED to be > 0 if any sample point exactly matches a source point.
 
     Returns
     -------
     ndarray (N,)
         Potential values at sample points
+
+    Raises
+    ------
+    ValueError
+        If any distance is exactly 0 and min_distance_miles is 0
     """
+    # Check for division by zero
+    if min_distance_miles == 0 and np.any(distances == 0):
+        raise ValueError(
+            "Sample point(s) exactly match source point(s) (distance=0). "
+            "Set min_distance_miles > 0 to avoid singularity. "
+            "Typical values: 0.5-1.0 miles for census centroids."
+        )
+
     # Apply minimum distance clamping if specified
     if min_distance_miles > 0:
-        # When smoothing, clamp ALL distances (including self) to min_distance
-        # This treats self-contribution consistently with nearby points
         distances_safe = np.maximum(distances, min_distance_miles)
     else:
-        # When not smoothing, exclude self-contribution to avoid division by zero
-        is_self = (distances == 0)
-        distances_safe = np.where(is_self, 1.0, distances)  # Dummy value for self
+        distances_safe = distances
 
     # Calculate raw contributions: weight / distance^exponent
     contributions = weights[np.newaxis, :] / (distances_safe ** force_exponent)
-
-    # Exclude self-contributions only when not using min_distance smoothing
-    if min_distance_miles == 0:
-        is_self = (distances == 0)
-        contributions = np.where(is_self, 0.0, contributions)
 
     # Apply max distance cutoff if specified
     if max_distance_miles is not None:
@@ -67,9 +71,6 @@ def calculate_potential_chunked(sample_lons, sample_lats,
     """
     Calculate potential at sample points from source points using chunked processing.
 
-    When min_distance_miles=0: Excludes self-contribution (distance=0) to avoid singularities.
-    When min_distance_miles>0: Includes self-contribution clamped to min_distance for consistency.
-
     Parameters
     ----------
     sample_lons, sample_lats : ndarray (N,)
@@ -86,8 +87,7 @@ def calculate_potential_chunked(sample_lons, sample_lats,
         Minimum distance for calculations (default: 0.0).
         Distances smaller than this are clamped to this value.
         Use 0.5-1.0 to smooth noise from approximate census centroids.
-        When 0.0, no clamping is applied.
-        Self-contribution (exact distance=0) is always excluded regardless.
+        REQUIRED to be > 0 if any sample point exactly matches a source point.
     max_distance_miles : float or None
         Maximum distance to include (default: None = no cutoff).
         Sources beyond this distance contribute zero potential.
@@ -96,7 +96,12 @@ def calculate_potential_chunked(sample_lons, sample_lats,
     Returns
     -------
     ndarray (N,)
-        Potential values at sample points (self-contribution excluded)
+        Potential values at sample points
+
+    Raises
+    ------
+    ValueError
+        If any sample point exactly matches a source point and min_distance_miles is 0
     """
     num_samples = len(sample_lons)
     potentials = np.zeros(num_samples)
@@ -126,23 +131,22 @@ def calculate_potential_chunked(sample_lons, sample_lats,
             # Function doesn't take avg_lat parameter (e.g., haversine)
             distances = distance_fn(chunk_lons, chunk_lats, source_lons, source_lats)
 
+        # Check for division by zero
+        if min_distance_miles == 0 and np.any(distances == 0):
+            raise ValueError(
+                "Sample point(s) exactly match source point(s) (distance=0). "
+                "Set min_distance_miles > 0 to avoid singularity. "
+                "Typical values: 0.5-1.0 miles for census centroids."
+            )
+
         # Apply minimum distance clamping if specified
         if min_distance_miles > 0:
-            # When smoothing, clamp ALL distances (including self) to min_distance
-            # This treats self-contribution consistently with nearby points
             distances_safe = np.maximum(distances, min_distance_miles)
         else:
-            # When not smoothing, exclude self-contribution to avoid division by zero
-            is_self = (distances == 0)
-            distances_safe = np.where(is_self, 1.0, distances)  # Dummy value for self
+            distances_safe = distances
 
         # Calculate contributions: weight / distance^exponent
         contributions = source_weights[np.newaxis, :] / (distances_safe ** force_exponent)
-
-        # Exclude self-contributions only when not using min_distance smoothing
-        if min_distance_miles == 0:
-            is_self = (distances == 0)
-            contributions = np.where(is_self, 0.0, contributions)
 
         # Apply max distance cutoff if specified
         if max_distance_miles is not None:

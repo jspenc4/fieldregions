@@ -16,21 +16,22 @@ def test_sf_bay_regression():
     lats = df['LATITUDE'].values
     weights = df['POPULATION'].values
 
-    # Calculate potential
+    # Calculate potential (with min_distance to smooth census centroid noise)
     potentials = potential.calculate_potential_chunked(
         lons, lats, lons, lats, weights,
         geometry.cos_corrected_distance,
-        force_exponent=3
+        force_exponent=3,
+        min_distance_miles=0.5  # Required when sampling at source points
     )
-    
+
     # Load baseline
     baseline = np.load('test_data/baseline_sf_bay.npy')
-    
+
     # Should match exactly (or very close due to floating point)
     np.testing.assert_allclose(potentials, baseline, rtol=1e-6)
-    
-    # Sanity checks on magnitudes
+
+    # Sanity checks on magnitudes (with min_distance=0.5)
     assert potentials.min() > 0
-    assert potentials.max() < 20_000_000  # Peak near Tenderloin ~10M
+    assert potentials.max() < 1_000_000  # Peak ~770k (includes self-contribution)
     assert potentials.mean() > 100_000
-    assert potentials.mean() < 500_000
+    assert potentials.mean() < 200_000
