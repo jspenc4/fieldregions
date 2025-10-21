@@ -172,7 +172,8 @@ def calculate_potential_chunked(sample_lons, sample_lats,
     else:
         # Parallel processing
         from joblib import Parallel, delayed
-        results = Parallel(n_jobs=n_jobs)(
+        print(f"  Processing {num_chunks} chunks with {n_jobs} parallel jobs...")
+        results = Parallel(n_jobs=n_jobs, verbose=10)(
             delayed(process_chunk)(chunk_idx) for chunk_idx in range(num_chunks)
         )
         for start_idx, end_idx, chunk_potentials in results:
