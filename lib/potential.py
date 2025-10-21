@@ -67,7 +67,8 @@ def calculate_potential(distances, weights,
 def calculate_potential_chunked(sample_lons, sample_lats,
                                 source_lons, source_lats, source_weights,
                                 distance_fn, force_exponent=3, chunk_size=1000,
-                                min_distance_miles=0.0, max_distance_miles=None):
+                                min_distance_miles=0.0, max_distance_miles=None,
+                                n_jobs=1):
     """
     Calculate potential at sample points from source points using chunked processing.
 
@@ -92,6 +93,9 @@ def calculate_potential_chunked(sample_lons, sample_lats,
         Maximum distance to include (default: None = no cutoff).
         Sources beyond this distance contribute zero potential.
         Use 50-100 to limit calculation to local influences only.
+    n_jobs : int
+        Number of parallel jobs (default: 1 = sequential).
+        Use -1 for all available cores.
 
     Returns
     -------
@@ -114,7 +118,9 @@ def calculate_potential_chunked(sample_lons, sample_lats,
     # Process in chunks
     num_chunks = (num_samples + chunk_size - 1) // chunk_size
 
-    for chunk_idx in range(num_chunks):
+    # Define chunk processing function
+    def process_chunk(chunk_idx):
+        """Process a single chunk and return (start_idx, end_idx, chunk_potentials)."""
         start_idx = chunk_idx * chunk_size
         end_idx = min(start_idx + chunk_size, num_samples)
 
@@ -154,6 +160,22 @@ def calculate_potential_chunked(sample_lons, sample_lats,
             contributions = np.where(beyond_max, 0.0, contributions)
 
         # Sum contributions for each sample point in this chunk
-        potentials[start_idx:end_idx] = np.sum(contributions, axis=1)
+        chunk_potentials = np.sum(contributions, axis=1)
+        return (start_idx, end_idx, chunk_potentials)
+
+    # Process chunks (parallel or sequential)
+    if n_jobs == 1:
+        # Sequential processing
+        for chunk_idx in range(num_chunks):
+            start_idx, end_idx, chunk_potentials = process_chunk(chunk_idx)
+            potentials[start_idx:end_idx] = chunk_potentials
+    else:
+        # Parallel processing
+        from joblib import Parallel, delayed
+        results = Parallel(n_jobs=n_jobs)(
+            delayed(process_chunk)(chunk_idx) for chunk_idx in range(num_chunks)
+        )
+        for start_idx, end_idx, chunk_potentials in results:
+            potentials[start_idx:end_idx] = chunk_potentials
 
     return potentials

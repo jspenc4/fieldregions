@@ -25,6 +25,23 @@ potentials = potential.calculate_potential_chunked(
 print(f"  Range: {potentials.min():,.0f} to {potentials.max():,.0f}")
 
 print("\nCreating 3D surface...")
+import numpy as np
+
+# Calculate aspect ratio: correct for latitude so 1 degree lon = 1 degree lat in miles
+center_lat = np.mean(lats)
+lon_span = lons.max() - lons.min()
+lat_span = lats.max() - lats.min()
+
+# At center latitude, 1 degree longitude = cos(lat) * 69 miles
+# 1 degree latitude = 69.172 miles
+# So aspect ratio lon:lat should be cos(center_lat) : 1
+lon_to_lat_ratio = np.cos(np.radians(center_lat))
+
+# Z aspect: 4% of the average horizontal span
+avg_horiz_span = (lon_span * lon_to_lat_ratio + lat_span) / 2
+z_span = potentials.max() - potentials.min()
+z_aspect = 0.04 * avg_horiz_span / z_span if z_span > 0 else 0.04
+
 fig = go.Figure(data=[go.Mesh3d(
     x=lons,
     y=lats,
@@ -41,11 +58,13 @@ fig.update_layout(
         yaxis_title='Latitude',
         zaxis_title='Potential',
         aspectmode='manual',
-        aspectratio=dict(x=1.5, y=1, z=0.3)
+        aspectratio=dict(x=lon_span * lon_to_lat_ratio, y=lat_span, z=z_span * z_aspect)
     ),
     width=1200,
     height=800
 )
+
+print(f"  Aspect ratio: lon={lon_span * lon_to_lat_ratio:.2f}, lat={lat_span:.2f}, z={z_span * z_aspect:.2f}")
 
 output = 'output/sf_1mile_simple.html'
 fig.write_html(output)
