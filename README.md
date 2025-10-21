@@ -275,12 +275,58 @@ Cross-validation across multiple datasets confirms robustness:
 
 All converge on the same major regional boundaries.
 
+## Recent Findings (2025)
+
+### Scale Invariance Validation
+
+Testing with US census data at different resolutions confirms the potential model is scale-invariant when using appropriate smoothing:
+
+| Dataset | Points | NYC Peak | LA Peak | SF Peak |
+|---------|--------|----------|---------|---------|
+| Census Tracts | 72,539 | 511,079 | 258,125 | 226,560 |
+| Block Groups | 216,273 | 509,437 | 257,986 | 226,910 |
+| **Difference** | **3.0x** | **0.3%** | **0.05%** | **0.1%** |
+
+**Key insight:** With `min_distance_miles=1.0` smoothing, increasing dataset granularity by 3× produces <1% change in results. This validates that the metric measures real population accessibility, not artifacts of census geography.
+
+### Performance Optimizations
+
+**Parallel Processing:** Block groups (216k × 216k = 47B calculations)
+- 2 cores, no max_distance: 7.7 minutes
+- 4 cores, 100-mile cutoff: 4.9 minutes (36% speedup)
+- Result difference: <0.01%
+
+**Recommendation:** Use `max_distance_miles=100` for large-scale calculations. Beyond 100 miles, contributions are negligible with force_exponent=3.
+
+### City Rankings (1-mile smoothing)
+
+| Rank | City | Peak Potential | Neighborhood |
+|------|------|----------------|--------------|
+| 1 | New York | 509,000 | Upper West Side / Yankee Stadium area |
+| 2 | Los Angeles | 258,000 | Downtown LA |
+| 3 | San Francisco | 227,000 | Mission District |
+| 4 | Philadelphia | 188,000 | Center City / Rittenhouse Square |
+| 5 | Chicago | 180,000 | Near North Side / Gold Coast |
+| 6 | Boston | 175,000 | Downtown / Financial District |
+| 7 | DC | 159,000 | Shaw / U Street |
+
+**Most remote locations:** Fort McDermitt, NV and remote Montana both scored potential = 2 (vs NYC's 509,000).
+
+### 3D Printing Plans
+
+First physical models in progress:
+- Bambu Lab P1S with AMS (4-color capability)
+- Plan: Print USA map with height = population potential
+- Color scheme: Blue (remote) → Cyan → Yellow → Red (dense)
+- Expected print time: 12-24 hours for full USA at high detail
+
 ## Future Development
 
 - [ ] Interactive web visualization with zoom/drill-down
 - [ ] "Crystal growth" animation of merge sequence
 - [ ] Temporal analysis with historical population data
 - [ ] Alternative metrics (travel time, economic gravity)
+- [ ] Census blocks analysis (~2.5M points, 2-3 day compute with 8 cores)
 - [ ] Code refactoring and test coverage
 
 ## Contributing
