@@ -48,3 +48,4 @@ censusBlockGroupResults.csv
 # Keep smaller PDFs and preview images
 !res/*.pdf
 !res/*_preview.jpg
+output/
