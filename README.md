@@ -3,7 +3,6 @@
 **Discovering hidden geographic structure through distance-weighted population analysis**
 
 [![GitHub Pages](https://img.shields.io/badge/demo-live-success)](https://jspenc4.github.io/javaMap/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ![World Population Potential](docs/images/world_preview.png)
 
@@ -30,12 +29,12 @@ Lines connecting merged population centers, colored by merge order.
 ![World Population](res/worldPrintMap.pdf)
 *Global population at 15 arc-minute resolution*
 
-### 3D Gravitational Potential Surface
+### 3D Population Potential Surface
 
-Population distribution rendered as elevation, where height represents cumulative gravitational pull.
+Population distribution rendered as elevation, where height represents cumulative population potential.
 
 ![3D Surface](res/3dsurface.png)
-*Western Hemisphere gravitational potential*
+*Western Hemisphere population potential*
 
 ## Key Findings
 
@@ -61,7 +60,7 @@ At every location, we sum contributions from all population sources, weighted by
 
 **Why 1/d³?** This comes from a 1/d⁴ force law, which has a special property: **scale invariance under grid coarsening**.
 
-Consider a regular grid with one person per point. Neighboring points attract with force = (1×1)/1⁴ = 1. Now coarsen to half resolution (every other gridpoint): each point now has 4 people, neighbors are 2 units apart, so force = (4×4)/2⁴ = 16/16 = 1. Same force, different resolution.
+Consider a regular 2D grid with one person per point. Neighboring points attract with force = (1×1)/1⁴ = 1. Now coarsen to half resolution (every other gridpoint in each dimension): each point now represents 4 people, neighbors are 2 units apart, so force = (4×4)/2⁴ = 16/16 = 1. Same force, different resolution.
 
 This means the strongest-attraction pairs are resolution-independent—you get the same hierarchical structure whether you use fine or coarse population data. The 1/d⁴ force law integrates to 1/d³ potential.
 
@@ -176,7 +175,7 @@ lats = df['LATITUDE'].values
 weights = df['POPULATION'].values
 
 # Calculate population potential at each census tract
-# Uses 1/d³ potential (from 1/d⁴ force law)
+# force_exponent=3 means 1/d³ potential (derived from 1/d⁴ force law)
 potentials = potential.calculate_potential_chunked(
     sample_lons=lons,
     sample_lats=lats,
@@ -184,8 +183,8 @@ potentials = potential.calculate_potential_chunked(
     source_lats=lats,
     source_weights=weights,
     distance_fn=geometry.cos_corrected_distance,
-    force_exponent=3,
-    chunk_size=1000  # Process 1000 points at a time
+    force_exponent=3,  # 1/d³ potential
+    chunk_size=1000    # Process 1000 points at a time
 )
 
 print(f"Potential range: {potentials.min():.0f} to {potentials.max():.0f}")
@@ -198,7 +197,7 @@ print(f"Potential range: {potentials.min():.0f} to {potentials.max():.0f}")
 - **sample_lons/lats**: Where to calculate potential (e.g., triangle centers, census tracts)
 - **source_lons/lats/weights**: Population sources (census tracts with populations)
 - **distance_fn**: `cos_corrected_distance` (fast) or `haversine_distance` (accurate)
-- **force_exponent**: 1 for gravity (1/d), 3 for social cohesion (1/d³), etc.
+- **force_exponent**: Exponent for potential calculation (3 = 1/d³, recommended for population potential)
 - **chunk_size**: Memory management (1000 works for 48GB RAM with 72k points)
 - **min_distance_miles**: Smooth noise by clamping distances (e.g., 1.0 mile for census centroids)
 - **max_distance_miles**: Limit to local influences (e.g., 50-100 miles)

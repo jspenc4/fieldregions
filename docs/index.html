@@ -220,26 +220,25 @@
 
     <div class="container">
         <div class="hero">
-            <h2>Seeing the Invisible Structure of Human Geography</h2>
+            <h2>What Happens When You Map Population as a Field?</h2>
             <p>
-                What if we could visualize population not as dots on a map, but as a gravitational field?
-                Just as mass creates gravity in physics, concentrations of people create "demographic gravity" -
-                patterns of accessibility, economic potential, and cultural influence that shape our world.
+                At every location on Earth, calculate the sum of all populations divided by distance cubed.
+                Despite this simple formula, the resulting "population potential" reveals geographic structures
+                that traditional population maps don't show.
             </p>
             <p>
-                Using the Stewart-Warntz population potential model (developed in the 1950s) with modern global
-                data and computational methods, we can finally see these invisible structures. The 1/d³ distance
-                decay reveals patterns that traditional maps hide: linear ridges along the Nile and Java,
-                cross-border megalopolises, and the polycentric structure of regions like Nigeria.
+                Linear ridges along the Nile and Java. Cross-border megalopolises like San Diego/Tijuana appearing
+                as unified peaks. Nigeria's three cultural regions emerging as distinct summits. The method consistently
+                discovers real geographic features across wildly different datasets.
             </p>
 
             <div class="insight-box">
-                <h3>Key Innovation</h3>
+                <h3>Scale Invariance</h3>
                 <p>
-                    By varying the spatial scale (15-mile vs 30-mile minimum distance), we reveal different
-                    levels of urban structure - from dense urban cores to regional cultural geography.
-                    The mathematics isn't arbitrary: decades of empirical research on migration, trade, and
-                    communication flows confirm that human interaction follows this steep distance decay.
+                    The 1/d³ potential comes from a 1/d⁴ force law chosen for a special property: scale invariance
+                    under grid coarsening. Whether you use fine census data or coarse grid cells, you get the same
+                    hierarchical structure. This isn't arbitrary—it's derived from the requirement that results
+                    shouldn't depend on data resolution.
                 </p>
             </div>
         </div>
@@ -249,26 +248,14 @@
 
             <div class="viz-grid">
                 <div class="viz-card">
-                    <img src="images/world_preview.png" alt="World Population Potential" onerror="this.style.display='none'">
                     <div class="content">
-                        <h3>World - 30 Mile Scale</h3>
+                        <h3>World - 30 Mile Hexagonal Grid</h3>
                         <p>
                             Reveals regional structure: Nigeria's three cultural peaks (Yoruba, Igbo, Hausa),
-                            the Nile's continuous ridge, Java's east-west wall, and Europe's interconnected megalopolis.
+                            the Nile's continuous ridge, Java's east-west corridor, and Europe's interconnected megalopolis.
+                            Hexagonal infill smooths coastlines and eliminates grid artifacts.
                         </p>
                         <a href="interactive/world_30mile.html" class="btn">Explore Interactive 3D</a>
-                    </div>
-                </div>
-
-                <div class="viz-card">
-                    <img src="images/world_15mile_preview.png" alt="World 15-Mile" onerror="this.style.display='none'">
-                    <div class="content">
-                        <h3>World - 15 Mile Scale</h3>
-                        <p>
-                            Finer resolution shows individual megacity dominance. Top 100 peaks span from
-                            New Delhi (7,593 potential) to Shunyi District, China (1,196 potential).
-                        </p>
-                        <a href="interactive/world_15mile.html" class="btn">Explore Interactive 3D</a>
                     </div>
                 </div>
             </div>
@@ -321,17 +308,6 @@
                     </div>
                 </div>
 
-                <div class="viz-card">
-                    <img src="images/sf_preview.png" alt="San Francisco Bay Area" onerror="this.style.display='none'">
-                    <div class="content">
-                        <h3>San Francisco Bay Area</h3>
-                        <p>
-                            Ultra-high resolution census tract analysis of the polycentric
-                            Bay Area structure across Fibonacci scale sequence.
-                        </p>
-                        <a href="interactive/sf_bay.html" class="btn">View Analysis</a>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -339,66 +315,44 @@
             <h2>Methodology & Theory</h2>
 
             <div class="findings">
-                <h3>Stewart-Warntz Population Potential Model</h3>
+                <h3>Population Potential Calculation</h3>
                 <p style="margin-bottom: 20px;">
                     The population potential at any location is calculated as the sum of all populations
                     divided by their distance cubed:
                 </p>
                 <p style="font-family: 'Courier New', monospace; background: #f0f0f0; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                    Potential(P) = Σ (Population_i / max(distance_i, min_distance)³)
+                    Potential(P) = Σ (Population_i / distance_i³)
                 </p>
                 <ul>
-                    <li><strong>Distance Decay (1/d³):</strong> Based on empirical studies of migration, trade, and communication patterns from the 1940s-1950s. Human interaction falls off much faster than physical gravity.</li>
-                    <li><strong>Minimum Distance:</strong> Acts as a spatial scale parameter - 15 miles reveals urban cores, 30 miles reveals regional structure, 100 miles reveals megacity dominance zones.</li>
-                    <li><strong>Haversine Distance:</strong> Great circle distance on Earth's surface ensures dataset-independent, geographically accurate results.</li>
-                    <li><strong>Scale Invariance:</strong> Rankings legitimately change with scale - different min_distance values answer different questions about urban structure.</li>
+                    <li><strong>1/d³ Exponent:</strong> Derived from a 1/d⁴ force law that has scale invariance under grid coarsening. Consider a grid with 1 person per cell: neighbors attract with (1×1)/1⁴ = 1. Coarsen to half resolution (4 people per cell, 2 units apart): (4×4)/2⁴ = 1. Same force, different resolution.</li>
+                    <li><strong>Empirical Validation:</strong> US census data at 3× different resolutions produces <1% variation in peak potential values, confirming the theoretical prediction.</li>
+                    <li><strong>Minimum Distance:</strong> Smooths census centroid noise (±0.5-1 mile error). Without this, self-contribution dominates.</li>
+                    <li><strong>Hexagonal Infill:</strong> Fills oceans and sparse areas to eliminate coastline artifacts and create continuous surfaces.</li>
                 </ul>
             </div>
 
             <div class="findings">
                 <h3>Data Sources</h3>
                 <ul>
-                    <li><strong>World:</strong> GPW v4.11 (2020) - Gridded Population of the World at 15 arc-minute (0.25°) resolution, approximately 17 miles at the equator</li>
+                    <li><strong>World:</strong> GPW v4.11 (2020) - Gridded Population of the World at 15 arc-minute (0.25°) resolution</li>
                     <li><strong>United States:</strong> 2020 Census Block Groups - highest resolution publicly available population data</li>
-                    <li><strong>Hex Grid Infill:</strong> 30-mile hexagonal grid fills ocean and sparse areas to smooth coastlines and create continuous surface</li>
+                    <li><strong>Hex Grid Infill:</strong> Hexagonal grid fills ocean and sparse areas to smooth coastlines and create continuous surfaces</li>
                 </ul>
             </div>
         </div>
 
         <div class="section">
-            <h2>Documentation & Code</h2>
+            <h2>Source Code & Documentation</h2>
 
             <div class="viz-grid">
                 <div class="viz-card">
                     <div class="content">
-                        <h3>Algorithm Details</h3>
-                        <p>
-                            Deep dive into the computational implementation: parallel processing,
-                            chunked calculations, and optimization strategies for global-scale analysis.
-                        </p>
-                        <a href="algorithm_summary.html" class="btn">Read Details</a>
-                    </div>
-                </div>
-
-                <div class="viz-card">
-                    <div class="content">
-                        <h3>Key Findings</h3>
-                        <p>
-                            2025 validation results confirming scale invariance, hierarchical structure,
-                            and the geographic insights revealed by multi-scale analysis.
-                        </p>
-                        <a href="insights.html" class="btn">View Findings</a>
-                    </div>
-                </div>
-
-                <div class="viz-card">
-                    <div class="content">
-                        <h3>Source Code</h3>
+                        <h3>GitHub Repository</h3>
                         <p>
                             Full Python implementation with CLI tools for potential calculation,
-                            visualization, and prominence analysis. MIT licensed.
+                            visualization, and prominence analysis.
                         </p>
-                        <a href="https://github.com/jspenc4/javaMap" class="btn">GitHub Repository</a>
+                        <a href="https://github.com/jspenc4/javaMap" class="btn">View on GitHub</a>
                     </div>
                 </div>
 
