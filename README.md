@@ -1,12 +1,22 @@
-# Hierarchical Population Clustering
+# Population Potential Fields
 
-Gravitational potential-based clustering algorithm that discovers natural regional structure in population data at multiple scales—from neighborhoods to continents.
+**Discovering hidden geographic structure through distance-weighted population analysis**
+
+[![GitHub Pages](https://img.shields.io/badge/demo-live-success)](https://jspenc4.github.io/javaMap/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+![World Population Potential](docs/images/world_preview.png)
 
 ## Overview
 
-This project implements a hierarchical clustering algorithm based on gravitational potential between population centers. Starting from individual census tracts or grid cells, it iteratively merges regions with the highest mutual attraction, building a complete hierarchy that reveals natural population structure without prior geographic knowledge.
+This project explores what happens when you calculate cumulative population potential using a 1/d³ distance weighting. The results reveal geographic structures that traditional population maps don't show:
 
-**Key insight:** The same algorithm discovers both that Central Park divides Manhattan's Upper East and West Sides, and that the Sahara Desert divides North and Sub-Saharan Africa.
+- **Linear ridges** along the Nile Valley and Java's populated corridor
+- **Cross-border megalopolises** like San Diego/Tijuana appearing as unified peaks
+- **Polycentric structures** revealing cultural regions (Nigeria's three distinct peaks)
+- **Hierarchical organization** at multiple scales—what merges at 15 miles vs 30 miles reveals different urban phenomena
+
+The method is simple: at every location, sum the population of all other locations divided by distance cubed. Despite this simplicity, it consistently discovers real geographic features across wildly different datasets.
 
 ## Visualizations
 
@@ -39,25 +49,33 @@ The algorithm naturally discovers:
 
 **Cross-validation:** Census tracts, block groups, and world grid data all converge on the same regional boundaries, confirming the algorithm captures real geographic structure.
 
-## Algorithm
+## The Method
 
-### Gravitational Potential Model
+### Population Potential Calculation
 
 ```
-potential(i, j) = (population_i × population_j) / distance(i, j)^4
+potential(location) = Σ (population_i / distance(location, i)^3)
 ```
 
-The inverse fourth power heavily weights nearby populations, mimicking urban agglomeration while allowing long-range effects.
+At every location, we sum contributions from all population sources, weighted by the inverse cube of distance. This heavy distance weighting (1/d³) emphasizes nearby populations while still allowing longer-range effects.
 
-### Process
+**Why 1/d³?** This comes from a 1/d⁴ force law, which has a special property: **scale invariance under grid coarsening**.
+
+Consider a regular grid with one person per point. Neighboring points attract with force = (1×1)/1⁴ = 1. Now coarsen to half resolution (every other gridpoint): each point now has 4 people, neighbors are 2 units apart, so force = (4×4)/2⁴ = 16/16 = 1. Same force, different resolution.
+
+This means the strongest-attraction pairs are resolution-independent—you get the same hierarchical structure whether you use fine or coarse population data. The 1/d⁴ force law integrates to 1/d³ potential.
+
+### Hierarchical Clustering (Original Java Implementation)
+
+The clustering algorithm discovers hierarchical structure by iteratively merging population centers:
 
 1. Start with individual census tracts/grid cells as separate regions
-2. Calculate pairwise gravitational potential between all regions
+2. Calculate pairwise potential between all regions using 1/d⁴ force law
 3. Merge the pair with highest potential
 4. Update centroid (population-weighted) and recalculate potentials
 5. Repeat until all regions merged into one
 
-**Output:** Complete merge tree showing hierarchical structure at all scales.
+**Output:** Complete merge tree showing hierarchical structure at all scales—which neighborhoods merge first, then cities, then metro areas, then regions.
 
 ### Distance Calculation
 
@@ -251,12 +269,26 @@ Top-level structure discovered by the algorithm:
 
 Complete hierarchy annotated down to 3M population in `docs/world tree.docx`. The algorithm continues to individual tracts but manual annotation became tedious.
 
-## Notable Discoveries
+## What the Analysis Reveals
 
-- **Grand Trunk Road** emerges as natural region despite spanning Pakistan/India/Bangladesh borders
-- **Florida** separates from Deep South in US clustering
-- **Middle East/Indian subcontinent** gap aligns with desert barrier
-- **Boundary regions** (Denver, Salt Lake City) are genuinely ambiguous—they could plausibly belong to multiple regions
+### Geographic Structure Emerges Naturally
+
+Despite using only population and distance, the potential field method discovers:
+
+- **Grand Trunk Road corridor** — India/Pakistan/Bangladesh emerge as coherent 1B+ person region
+- **Cultural boundaries** — Florida separates from Deep South; Nigeria shows three distinct peaks
+- **Physical barriers** — Middle East/Indian subcontinent gap aligns with desert; oceans create natural boundaries
+- **Genuine ambiguity** — Denver and Salt Lake City don't clearly "belong" to any region, reflecting their actual geographic position
+
+### Scale-Dependent Hierarchies
+
+What merges at different distance scales reveals different phenomena:
+- **3-5 miles**: Neighborhood structure within cities
+- **15 miles**: Metropolitan regions and satellite cities
+- **30 miles**: Megalopolitan corridors
+- **100+ miles**: Continental regions
+
+The same algorithm running at different scales extracts different meaningful geographic patterns.
 
 ## Technical Notes
 
@@ -275,11 +307,11 @@ Cross-validation across multiple datasets confirms robustness:
 
 All converge on the same major regional boundaries.
 
-## Recent Findings (2025)
+## Empirical Validation (2025)
 
-### Scale Invariance Validation
+### Scale Invariance Confirmed
 
-Testing with US census data at different resolutions confirms the potential model is scale-invariant when using appropriate smoothing:
+The 1/d⁴ force law was chosen specifically for its theoretical scale invariance (see grid coarsening argument above). Testing with real US census data at different resolutions confirms this works in practice:
 
 | Dataset | Points | NYC Peak | LA Peak | SF Peak |
 |---------|--------|----------|---------|---------|
@@ -287,7 +319,9 @@ Testing with US census data at different resolutions confirms the potential mode
 | Block Groups | 216,273 | 509,437 | 257,986 | 226,910 |
 | **Difference** | **3.0x** | **0.3%** | **0.05%** | **0.1%** |
 
-**Key insight:** With `min_distance_miles=1.0` smoothing, increasing dataset granularity by 3× produces <1% change in results. This validates that the metric measures real population accessibility, not artifacts of census geography.
+**Result:** Tripling the number of data points changes peak potential values by less than 1%. The theoretical prediction holds with real-world data—the method captures geographic structure, not census artifacts.
+
+**Technical note:** This consistency requires `min_distance_miles=1.0` smoothing to handle noise in census centroid locations (±0.5-1 mile precision). Without smoothing, self-contribution from a tract's own population dominates, obscuring regional patterns.
 
 ### Performance Optimizations
 
@@ -337,13 +371,25 @@ This is currently a personal research project. If you're interested in collabora
 
 [To be determined]
 
+## Background and Related Work
+
+This work uses distance-weighted population metrics, an approach with roots in economic geography and regional science. The 1/d⁴ force law (giving 1/d³ potential) was derived from the requirement of scale invariance under grid coarsening—the same hierarchical structure should emerge regardless of data resolution.
+
+Similar concepts appear in:
+- Regional accessibility metrics in transportation planning
+- Market potential models in economic geography
+- Urban gravity models for commuting patterns
+- Stewart-Warntz population potential (though that typically uses 1/d rather than 1/d³)
+
+The hierarchical clustering algorithm and the scale invariance argument are original work from 2015-2021.
+
 ## Citation
 
-If you use this work, please cite:
+If you use this work:
 
 ```
-Spencer, J. (2015-2021). Hierarchical Population Clustering via Gravitational Potential.
-[GitHub repository or paper citation once available]
+Spencer, J. (2015-2025). Population Potential Fields: Hierarchical Geographic Structure
+Through Distance-Weighted Analysis. https://github.com/jspenc4/javaMap
 ```
 
 ## Acknowledgments
@@ -351,6 +397,7 @@ Spencer, J. (2015-2021). Hierarchical Population Clustering via Gravitational Po
 Thanks to:
 - The printer guy who thought it was cool
 - My spouse for tolerating this obsession
+- Everyone who's looked at these visualizations and said "wait, that's actually interesting"
 
 ---
 

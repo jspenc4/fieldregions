@@ -14,7 +14,7 @@ import urllib.parse
 import json
 
 
-def reverse_geocode(lat, lon):
+def reverse_geocode(lat, lon, prefer_english=True):
     """
     Reverse geocode using Nominatim (OpenStreetMap).
 
@@ -26,6 +26,10 @@ def reverse_geocode(lat, lon):
 
         req = urllib.request.Request(url)
         req.add_header('User-Agent', 'PopulationPotentialAnalysis/1.0')
+
+        # Request English names when available
+        if prefer_english:
+            req.add_header('Accept-Language', 'en')
 
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read())

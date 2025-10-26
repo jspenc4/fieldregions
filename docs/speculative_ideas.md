@@ -426,4 +426,361 @@ Given a spanning tree of census tracts with population weights, divide into k di
 
 ---
 
+## Topographic Prominence for Population Potential (2025-10-25)
+
+### The Goal
+
+Calculate proper topographic prominence for population potential peaks to identify which metro areas are genuinely distinct vs riding on shoulders of larger metros.
+
+**Example:** Orange County vs LA
+- OC peak potential: ~93K
+- LA peak potential: ~169K
+- Direct path OC→LA: Goes through dense Gateway Cities area (~120K)
+- Ocean path OC→LA: Goes through ports/ocean (~0K)
+- **Question:** Which is the "correct" key col for prominence?
+
+### The Problem
+
+Standard BFS flooding finds ANY path from peak to higher ground, typically the lowest descent (ocean/desert). But prominence should use the **saddle point** = the highest of the low points across all routes.
+
+**Current naive BFS algorithm is wrong because:**
+- Floods outward equally in all directions
+- Stops at first path to higher ground
+- Finds minimum descent (ocean) not saddle (populated ridge)
+- Result: prominence ≈ peak height for most metros (wrong!)
+
+### The Correct Algorithm
+
+**Watershed/saddle-point finding:**
+1. For each peak pair (lower, higher)
+2. Find all possible paths between them
+3. For each path, identify its lowest point
+4. Key col = MAX(lowest points) = the best/highest saddle
+5. Prominence = peak - key_col
+
+**Equivalently (watershed):**
+- Flood from lowest elevations upward
+- When two basins meet, that's a saddle
+- Height at meeting point = key col between those peaks
+
+### Implementation Challenges
+
+**For gridded data (GPW world):**
+- Data is on regular lat/lon grid
+- Can reshape to 2D array
+- Use scipy.ndimage or skimage.morphology watershed
+- BUT: Need to exclude hex infill points (artificial)
+- Need proper watershed implementation that finds saddles
+
+**For irregular data (US Census):**
+- Scattered points (tracts/blocks)
+- Use Delaunay triangulation for mesh
+- Need algorithms for triangulated irregular networks (TINs)
+- Hydrology/terrain analysis tools handle this
+- Possibly: HEC-RAS, GRASS GIS, or specialized Python libraries
+
+### Relevant Libraries to Investigate
+
+**For gridded data:**
+- `scipy.ndimage.watershed_ift` - Image foresting transform
+- `skimage.morphology.watershed` - Watershed segmentation
+- `skimage.feature.peak_local_max` + watershed - Combined approach
+
+**For triangulated data:**
+- Terrain analysis libraries (GDAL, GRASS)
+- Mesh-based watershed algorithms
+- Graph-based saddle-point finding
+- Possibly finite element libraries (deal with TINs)
+
+**Historical context:**
+- HEC-1 (Hydrologic Engineering Center) - 1970s Fortran
+- Modern: HEC-RAS, HEC-HMS for watershed delineation
+- These solve exact same problem (water flow = potential flow)
+
+### Next Steps (Parking Lot)
+
+1. **For world GPW data:**
+   - Exclude hex infill points from prominence calculation
+   - Convert to regular 2D grid
+   - Research proper scipy/skimage watershed for finding saddles
+   - Test on known examples (LA/OC, Delhi/Mumbai)
+
+2. **For US Census data:**
+   - Research TIN-based prominence algorithms
+   - Look into terrain analysis libraries
+   - Possibly collaborate with hydrology/GIS experts
+   - Alternative: Interpolate to grid first (loses resolution)
+
+3. **Validation:**
+   - Compare to known metro relationships
+   - SF/Oakland should show low prominence (separated by water)
+   - NYC boroughs should show high inter-connectivity
+   - LA/OC should show moderate separation via Gateway Cities
+
+### Why This Matters
+
+Prominence distinguishes:
+- **True independent metros** (high prominence) - Delhi, Tokyo
+- **Satellite cities** (low prominence) - Newark to NYC, Oakland to SF
+- **Regional ambiguity** (medium prominence) - OC/LA, Dallas/Fort Worth
+
+Without correct prominence, we can't answer questions like:
+- "How many genuinely distinct population centers does the US have?"
+- "Which global metros are truly isolated vs clustered?"
+- "What are the natural mega-regions?"
+
+**Status:** Conceptually understood, algorithmically unsolved. Need proper watershed/saddle-finding for geographic point clouds.
+
+---
+
+## Multi-Scale Animation (2025-10-25)
+
+### The Idea
+
+Create an animation showing how the population potential landscape transforms across different spatial scales. As min_distance increases, watch individual cities merge into metro regions, then megalopolis clusters.
+
+### Why This Matters
+
+**Scale-dependent rankings are a feature, not a bug:**
+- Different scales answer different questions
+- 15-mile: "Which city has the densest core?" (commuting scale)
+- 30-mile: "Which metro has the most accessible population?" (regional economy)
+- 100-mile: "Which megacity dominates its continent?" (national influence)
+
+Rankings legitimately change with scale - this isn't measurement error, it's revealing different aspects of urban structure.
+
+### Implementation Approach
+
+**Fibonacci scale sequence:**
+- Use existing Fibonacci scale experiments as template
+- Scales: 5, 8, 13, 21, 34, 55, 89 miles (or similar)
+- For each scale:
+  - Calculate potentials with that min_distance
+  - Render with consistent camera angle/lighting
+  - Use same color scale (normalized to max at each scale)
+  - Export as PNG frame
+
+**Animation assembly:**
+- Stitch frames together (ffmpeg or similar)
+- Smooth transitions between scales
+- Optional: Show current scale value on frame
+- Consider: Log scale for time (faster at small scales, slower at large)
+
+### Observable Phenomena
+
+What you'd see:
+
+1. **Small scales (5-10mi):**
+   - Very pointy landscape
+   - Individual neighborhoods visible
+   - Every small town is a distinct peak
+
+2. **Medium scales (15-30mi):**
+   - Cities merge into metro regions
+   - Peaks broaden and lower
+   - Satellite cities start merging with cores
+
+3. **Large scales (50-100mi):**
+   - Megalopolis regions emerge
+   - BosWash corridor becomes single feature
+   - Pearl River Delta merges
+   - Continental-scale structure dominates
+
+4. **Ranking changes:**
+   - Compact dense cores (Delhi, Dhaka) dominate at small scales
+   - Sprawling metros (Tokyo, LA) gain at medium scales
+   - Polycentric regions (Java, Eastern China) emerge at large scales
+
+### Technical Challenges
+
+**Computational:**
+- Need potentials at ~7-10 different scales
+- Each calculation takes time (world data ~45 min at 30mi)
+- Could parallelize: run all scales simultaneously
+- Or: Pre-compute and cache
+
+**Visual consistency:**
+- Need fixed camera angle across all frames
+- Color normalization: absolute (shows height changes) vs relative (emphasizes peaks)
+- Z-scale might need adjustment by scale (taller peaks at small scales)
+
+**Data considerations:**
+- World GPW data: Good candidate (218K points, global coverage)
+- CONUS block groups: Too large/detailed for animation (would be slow)
+- Could do regional: California, Northeast US, etc.
+
+### Related to Existing Work
+
+Builds on:
+- Fibonacci scale visualizations already in codebase
+- Scale invariance documentation (README)
+- HQ rendering mode just added to visualize_potential.py
+
+### Next Steps (When Ready)
+
+1. Create animation script similar to existing scale experiments
+2. Test on smaller region first (California or similar)
+3. Optimize rendering for batch generation
+4. Decide on frame rate and transition style
+5. Generate world-scale version
+6. Upload to YouTube/share for feedback
+
+**Status:** Conceptual. Would be compelling visualization of scale-dependent urban structure. Good candidate for outreach/communication of the project's insights.
+
+---
+
+## Camera Path Animation / Flyover Video (2025-10-25)
+
+### The Idea
+
+Generate a video that "flies" around or through the population potential landscape. Camera moves along a predefined path while the data/landscape stays fixed.
+
+### Why This Is Cool
+
+- **Engaging presentation**: Much more compelling than static images
+- **Reveals 3D structure**: Rotation/movement shows depth and relationships
+- **YouTube/conference ready**: Professional video output
+- **Explores geography**: Can highlight specific regions or show global overview
+
+### Possible Camera Paths
+
+**1. Global Orbit:**
+- 360° rotation around Earth at constant altitude
+- Shows all continents in sequence
+- Smooth, simple, comprehensive
+
+**2. Zoom Sequence:**
+- Start: Far view showing whole globe
+- Zoom in: Focus on one region (e.g., South Asia peak)
+- Pan: Move to another region (e.g., East Asia)
+- Zoom out: Return to global view
+
+**3. Flyover / Great Circle:**
+- Low altitude pass along population corridor
+- Route: Delhi → Kolkata → Bangkok → Shanghai → Tokyo
+- Or: Western Europe → Eastern Europe → Central Asia
+- Shows relative heights and transitions between metros
+
+**4. Comparative Split-Screen:**
+- Same camera path, different scales side-by-side
+- Left: 15-mile (sharp peaks)
+- Right: 30-mile (smoothed regions)
+- Synchronized movement
+
+**5. Continent Focus:**
+- Regional tours (Asia, Europe, Americas)
+- Slower, more detailed examination
+- Could add city labels at peaks
+
+### Technical Implementation
+
+**Frame generation:**
+```python
+# Pseudo-code
+for i, camera_pos in enumerate(camera_path):
+    fig = create_mesh_3d(
+        lons, lats, potentials,
+        camera=camera_pos,  # Only thing that changes
+        # All other params constant
+    )
+    fig.write_image(f'frames/frame_{i:04d}.png')
+```
+
+**Camera path calculation:**
+- Spherical coordinates for orbit
+- Interpolate between keyframes for smooth motion
+- Consider: Ease-in/ease-out for velocity
+- Typical: 30-60 fps, 10-30 second video = 300-1800 frames
+
+**Video assembly:**
+```bash
+ffmpeg -framerate 30 -i 'frames/frame_%04d.png' \
+  -c:v libx264 -pix_fmt yuv420p -crf 18 \
+  output.mp4
+```
+
+### Parameters to Consider
+
+**Camera positioning:**
+- `eye`: Camera position (x, y, z in 3D space)
+- `center`: Look-at point (usually origin)
+- `up`: Up vector (defines rotation)
+
+**Plotly camera dict:**
+```python
+camera = dict(
+    eye=dict(x=x_pos, y=y_pos, z=z_pos),
+    center=dict(x=0, y=0, z=0),
+    up=dict(x=0, y=0, z=1)
+)
+```
+
+**Path smoothing:**
+- Cubic spline interpolation between waypoints
+- Constant angular velocity vs constant speed
+- Banking/rotation for dramatic effect
+
+### Challenges
+
+**Rendering time:**
+- Each frame = full HQ render (~few seconds)
+- 600 frames @ 3 sec each = 30 minutes total
+- Parallelizable: Generate frames independently
+- Could batch: 4-8 cores = 4-8x speedup
+
+**File size:**
+- 1920x1080 PNGs @ 600 frames = ~5-10 GB intermediate
+- Final H.264 video: ~50-200 MB (depending on compression)
+- Need adequate disk space
+
+**Visual consistency:**
+- Must lock color scale across all frames
+- Fixed lighting parameters
+- Consistent z-scale
+- Otherwise: Jarring jumps between frames
+
+**Motion sickness:**
+- Too fast = disorienting
+- Too slow = boring
+- Need testing to find sweet spot
+- Smooth acceleration/deceleration
+
+### Extensions
+
+**Audio:**
+- Background music
+- Voiceover narration explaining features
+- Sound effects (optional, probably cheesy)
+
+**Annotations:**
+- City labels appearing as camera passes
+- Scale indicator
+- Title cards between segments
+
+**Interactive:**
+- Upload to Sketchfab or similar platform
+- Viewer can control camera themselves
+- Combines video appeal with interactivity
+
+### Related Work
+
+Inspiration from:
+- Earth at Night NASA visualizations
+- Population density visualizations (Pudding, NY Times)
+- Terrain flyovers (Google Earth, drone footage)
+- Our existing 3D HTML viewers (but automated camera path)
+
+### Next Steps (When Ready)
+
+1. Start simple: Single 360° orbit, 10 seconds
+2. Test rendering pipeline and timing
+3. Refine camera path for smooth motion
+4. Generate full video
+5. Add music/annotations if desired
+6. Upload to YouTube or project page
+
+**Status:** Conceptual. Technically straightforward using existing tools. Main cost is rendering time. Would make excellent outreach/presentation material.
+
+---
+
 *End of speculative section. These ideas are works in progress. Some may be profound, some may be nonsense. Time will tell.*

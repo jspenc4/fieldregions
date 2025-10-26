@@ -3,198 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Population Clustering Visualizations</title>
+    <title>Population Potential Fields - Visualizing Global Demographic Gravity</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        h1 {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
             color: #333;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
+            background: #fafafa;
         }
-        .description {
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .hero {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .gallery {
+
+        .hero h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .hero p {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .insight-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .insight-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .viz-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 30px;
             margin-bottom: 40px;
         }
-        .gallery-item {
+
+        .viz-card {
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .gallery-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
+        .viz-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
         }
-        .gallery-item img {
+
+        .viz-card img {
             width: 100%;
             height: auto;
             display: block;
         }
-        .gallery-item .caption {
-            padding: 15px;
+
+        .viz-card .content {
+            padding: 25px;
         }
-        .gallery-item h3 {
-            margin: 0 0 10px 0;
-            color: #333;
+
+        .viz-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.4em;
         }
-        .gallery-item p {
-            margin: 0;
+
+        .viz-card p {
             color: #666;
-            font-size: 14px;
-            line-height: 1.5;
+            margin-bottom: 15px;
         }
-        .interactive-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .interactive-section h2 {
-            color: #333;
-            margin-top: 0;
-        }
-        .link-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
-        }
-        .link-grid a {
-            padding: 12px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            text-decoration: none;
-            color: #333;
-            transition: background 0.2s;
-        }
-        .link-grid a:hover {
-            background: #4CAF50;
+
+        .viz-card .btn {
+            display: inline-block;
+            background: #667eea;
             color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+            margin-right: 10px;
         }
-        .warning {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
+
+        .viz-card .btn:hover {
+            background: #5568d3;
+        }
+
+        .viz-card .btn-secondary {
+            background: #764ba2;
+        }
+
+        .viz-card .btn-secondary:hover {
+            background: #653a8b;
+        }
+
+        .findings {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .findings h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .findings ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .findings li {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9ff;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .findings strong {
+            color: #764ba2;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .viz-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Population Clustering Visualizations</h1>
+    <header>
+        <h1>Population Potential Fields</h1>
+        <p>Visualizing global demographic gravity - revealing how population distribution creates invisible landscapes of human interaction</p>
+    </header>
 
-    <div class="description">
-        <p>These visualizations show Earth's population as a <strong>connected network</strong>, not isolated dots.
-        Each location's height represents its cumulative gravitational pull from <em>all other populations</em>, weighted by distance (1/d³).</p>
+    <div class="container">
+        <div class="hero">
+            <h2>Seeing the Invisible Structure of Human Geography</h2>
+            <p>
+                What if we could visualize population not as dots on a map, but as a gravitational field?
+                Just as mass creates gravity in physics, concentrations of people create "demographic gravity" -
+                patterns of accessibility, economic potential, and cultural influence that shape our world.
+            </p>
+            <p>
+                Using the Stewart-Warntz population potential model (developed in the 1950s) with modern global
+                data and computational methods, we can finally see these invisible structures. The 1/d³ distance
+                decay reveals patterns that traditional maps hide: linear ridges along the Nile and Java,
+                cross-border megalopolises, and the polycentric structure of regions like Nigeria.
+            </p>
 
-        <p><strong>The key insight:</strong> Kabul and Dhaka aren't independent - they're tied together through the network.
-        A density map shows them as separate bright spots. This shows their <em>relationship</em>: Kabul sits at a high potential because it's connected to the entire Indian subcontinent population system through corridors and passes.</p>
-
-        <p><strong>How it works - the auction at every scale:</strong> Each location "decides" which way it's pulled by following the gradient.
-        Your census block joins Wappingers → which joins Poughkeepsie → which joins Newburgh as Mid-Hudson Valley → which joins NYC metro → which is the Eastern US core.
-        At each scale, the gradient points toward the strongest pull. The spanning tree captures these nested decisions, revealing the natural hierarchy from neighborhoods to continents.</p>
-
-        <p><strong>What emerges:</strong>
-        <br>• <strong>Peaks:</strong> Well-connected population centers (NYC, Delhi, Tokyo)
-        <br>• <strong>Ridges:</strong> Connection corridors (Grand Trunk Road, Eastern Seaboard)
-        <br>• <strong>Valleys:</strong> Remote areas weakly connected to the network (Sahara, Central Australia)
-        <br>• <strong>Saddle points:</strong> Natural boundaries where networks barely touch (Himalayas between India/China)</p>
-
-        <p><strong>Why this matters:</strong> Unlike density maps that show isolated cities, this reveals the <strong>skeleton of civilization</strong> -
-        how settlements naturally connect and cluster through geographic space. The structure persists across scales: zoom out to see continental networks,
-        zoom in to see regional corridors, zoom further to see neighborhood connections. It never dissolves into meaningless dots.</p>
-
-        <p><em>Data source: NASA GPWv4 population grid (2020), 15 arc-minute resolution</em></p>
-    </div>
-
-    <div class="gallery">
-        <div class="gallery-item">
-            <img src="images/worldPrintMap_preview.jpg" alt="World Population Potential Map">
-            <div class="caption">
-                <h3>World Population Structure</h3>
-                <p>This is NOT population density - each colored line is a connection in an expanding spanning tree showing how populations naturally cluster. The structure reveals geographic barriers (Sahara, Himalayas) and natural corridors (river valleys, coastlines) that shape human settlement patterns.</p>
+            <div class="insight-box">
+                <h3>Key Innovation</h3>
+                <p>
+                    By varying the spatial scale (15-mile vs 30-mile minimum distance), we reveal different
+                    levels of urban structure - from dense urban cores to regional cultural geography.
+                    The mathematics isn't arbitrary: decades of empirical research on migration, trade, and
+                    communication flows confirm that human interaction follows this steep distance decay.
+                </p>
             </div>
         </div>
 
-        <div class="gallery-item">
-            <img src="images/usa6region.jpg" alt="USA 6 Regions">
-            <div class="caption">
-                <h3>USA Regional Analysis</h3>
-                <p>Six natural regions emerge from the clustering algorithm. Regional boundaries form where attraction lines don't cross - revealing geographic barriers and low-population zones that naturally separate metropolitan spheres of influence.</p>
-            </div>
-        </div>
+        <div class="section">
+            <h2>Global Population Potential (2020)</h2>
 
-        <div class="gallery-item">
-            <a href="interactive/world_surface_3d.html" style="text-decoration: none; color: inherit;">
-                <img src="images/3dsurface.png" alt="3D Interactive World View">
-                <div class="caption">
-                    <h3>🌍 Interactive 3D World View</h3>
-                    <p>Click to explore the full interactive 3D visualization. Rotate, zoom, and hover over the surface to see population potential values in real-time.</p>
+            <div class="viz-grid">
+                <div class="viz-card">
+                    <img src="images/world_preview.png" alt="World Population Potential" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>World - 30 Mile Scale</h3>
+                        <p>
+                            Reveals regional structure: Nigeria's three cultural peaks (Yoruba, Igbo, Hausa),
+                            the Nile's continuous ridge, Java's east-west wall, and Europe's interconnected megalopolis.
+                        </p>
+                        <a href="interactive/world_30mile.html" class="btn">Explore Interactive 3D</a>
+                    </div>
                 </div>
-            </a>
+
+                <div class="viz-card">
+                    <img src="images/world_15mile_preview.png" alt="World 15-Mile" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>World - 15 Mile Scale</h3>
+                        <p>
+                            Finer resolution shows individual megacity dominance. Top 100 peaks span from
+                            New Delhi (7,593 potential) to Shunyi District, China (1,196 potential).
+                        </p>
+                        <a href="interactive/world_15mile.html" class="btn">Explore Interactive 3D</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="findings">
+                <h3>Geographic Insights from Global Analysis</h3>
+                <ul>
+                    <li><strong>The Nile Wall:</strong> Population potential of 1,090-1,420 forms a continuous north-south ridge following the Nile Valley - one of Earth's most dramatic linear population structures</li>
+                    <li><strong>Java's Ridge:</strong> 600 miles of continuous dense settlement (potential 920-1,505) across the island - among the most densely populated regions globally</li>
+                    <li><strong>Nigeria's Three Peaks:</strong> Lagos (Yoruba, 683), Igbo heartland (Owerri/Aba, 590), and Kano (Hausa, 479) perfectly map Nigeria's three major cultural regions</li>
+                    <li><strong>Cross-Border Megalopolises:</strong> San Diego/Tijuana merge into a single peak - the data sees functional urban regions, not political boundaries</li>
+                    <li><strong>Europe's Structure:</strong> Istanbul (672) edges out London (643), but the London/Paris/Amsterdam cluster forms Western Europe's dominant ridge through mutual reinforcement</li>
+                    <li><strong>Asian Dominance:</strong> Top 100 peaks heavily concentrated in South Asia (India/Bangladesh), East Asia (China/Japan), and Southeast Asia (Indonesia/Philippines) - reflecting the global population center</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>United States - Continental Scale</h2>
+
+            <div class="viz-grid">
+                <div class="viz-card">
+                    <img src="images/usa_preview.png" alt="USA Population Potential" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>CONUS Population Field</h3>
+                        <p>
+                            High-resolution block group data reveals the Northeast megalopolis,
+                            the distinct peaks of major metros, and the dramatic population gradient
+                            from coast to interior.
+                        </p>
+                        <a href="interactive/usa.html" class="btn">Explore Interactive 3D</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Regional Deep Dives</h2>
+
+            <div class="viz-grid">
+                <div class="viz-card">
+                    <img src="images/ca_preview.png" alt="California" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>California</h3>
+                        <p>
+                            Multi-scale analysis showing how the Bay Area and Greater LA appear
+                            at different spatial scales, revealing polycentric vs monocentric structure.
+                        </p>
+                        <a href="interactive/california.html" class="btn">View Analysis</a>
+                    </div>
+                </div>
+
+                <div class="viz-card">
+                    <img src="images/sf_preview.png" alt="San Francisco Bay Area" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>San Francisco Bay Area</h3>
+                        <p>
+                            Ultra-high resolution census tract analysis of the polycentric
+                            Bay Area structure across Fibonacci scale sequence.
+                        </p>
+                        <a href="interactive/sf_bay.html" class="btn">View Analysis</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Methodology & Theory</h2>
+
+            <div class="findings">
+                <h3>Stewart-Warntz Population Potential Model</h3>
+                <p style="margin-bottom: 20px;">
+                    The population potential at any location is calculated as the sum of all populations
+                    divided by their distance cubed:
+                </p>
+                <p style="font-family: 'Courier New', monospace; background: #f0f0f0; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                    Potential(P) = Σ (Population_i / max(distance_i, min_distance)³)
+                </p>
+                <ul>
+                    <li><strong>Distance Decay (1/d³):</strong> Based on empirical studies of migration, trade, and communication patterns from the 1940s-1950s. Human interaction falls off much faster than physical gravity.</li>
+                    <li><strong>Minimum Distance:</strong> Acts as a spatial scale parameter - 15 miles reveals urban cores, 30 miles reveals regional structure, 100 miles reveals megacity dominance zones.</li>
+                    <li><strong>Haversine Distance:</strong> Great circle distance on Earth's surface ensures dataset-independent, geographically accurate results.</li>
+                    <li><strong>Scale Invariance:</strong> Rankings legitimately change with scale - different min_distance values answer different questions about urban structure.</li>
+                </ul>
+            </div>
+
+            <div class="findings">
+                <h3>Data Sources</h3>
+                <ul>
+                    <li><strong>World:</strong> GPW v4.11 (2020) - Gridded Population of the World at 15 arc-minute (0.25°) resolution, approximately 17 miles at the equator</li>
+                    <li><strong>United States:</strong> 2020 Census Block Groups - highest resolution publicly available population data</li>
+                    <li><strong>Hex Grid Infill:</strong> 30-mile hexagonal grid fills ocean and sparse areas to smooth coastlines and create continuous surface</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Documentation & Code</h2>
+
+            <div class="viz-grid">
+                <div class="viz-card">
+                    <div class="content">
+                        <h3>Algorithm Details</h3>
+                        <p>
+                            Deep dive into the computational implementation: parallel processing,
+                            chunked calculations, and optimization strategies for global-scale analysis.
+                        </p>
+                        <a href="algorithm_summary.html" class="btn">Read Details</a>
+                    </div>
+                </div>
+
+                <div class="viz-card">
+                    <div class="content">
+                        <h3>Key Findings</h3>
+                        <p>
+                            2025 validation results confirming scale invariance, hierarchical structure,
+                            and the geographic insights revealed by multi-scale analysis.
+                        </p>
+                        <a href="insights.html" class="btn">View Findings</a>
+                    </div>
+                </div>
+
+                <div class="viz-card">
+                    <div class="content">
+                        <h3>Source Code</h3>
+                        <p>
+                            Full Python implementation with CLI tools for potential calculation,
+                            visualization, and prominence analysis. MIT licensed.
+                        </p>
+                        <a href="https://github.com/jspenc4/javaMap" class="btn">GitHub Repository</a>
+                    </div>
+                </div>
+
+                <div class="viz-card">
+                    <div class="content">
+                        <h3>Future Directions</h3>
+                        <p>
+                            Multi-scale animations, camera path flyovers, temporal analysis,
+                            and other speculative ideas for extending this work.
+                        </p>
+                        <a href="speculative_ideas.html" class="btn">Explore Ideas</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="interactive-section">
-        <h2>📚 Technical Documentation</h2>
-        <p>Dive deeper into the algorithms, force laws, and implementation details:</p>
-        <div class="link-grid">
-            <a href="README">📖 Main Project Overview</a>
-            <a href="3d-visualization">🔬 3D Visualization Guide</a>
-        </div>
-        <p style="margin-top: 15px; font-size: 14px; color: #666;">
-            <strong>3D Visualization Guide</strong> covers force laws (gravity 1/d² vs social cohesion 1/d⁴),
-            sampling methods, the 500-900× vectorization breakthrough, and 3D printing considerations.
+    <footer>
+        <p>
+            Population Potential Field Visualization Project<br>
+            Built with Python, NumPy, Plotly, and computational geography<br>
+            <a href="https://github.com/jspenc4/javaMap">View on GitHub</a>
         </p>
-    </div>
-
-    <div class="interactive-section">
-        <h2>🌐 Interactive 3D Visualizations</h2>
-        <p>Explore the data in fully interactive 3D! Rotate, zoom, and hover over the surface to see exact values.</p>
-
-        <div class="warning">
-            ⚠️ <strong>Note:</strong> These files are large (40-60 MB each) and may take a moment to load.
-        </div>
-
-        <h3>Global Views</h3>
-        <div class="link-grid">
-            <a href="interactive/world_surface_3d.html">🌍 World View</a>
-            <a href="interactive/western_hemisphere_3d.html">🌎 Western Hemisphere</a>
-            <a href="interactive/eastern_hemisphere_3d.html">🌏 Eastern Hemisphere</a>
-            <a href="interactive/asia_pacific_3d.html">🗾 Asia Pacific</a>
-        </div>
-
-        <h3>Guided Tours (Pre-positioned Views)</h3>
-        <div class="link-grid">
-            <a href="interactive/tour_northeast_us_megalopolis.html">🏙️ Northeast US</a>
-            <a href="interactive/tour_tokyo_osaka_peak.html">🗼 Tokyo-Osaka</a>
-            <a href="interactive/tour_himalayan_valley.html">🏔️ Himalayan Valley</a>
-            <a href="interactive/tour_golden_triangle_valley.html">🌄 Golden Triangle</a>
-            <a href="interactive/tour_sahara_desert_valley.html">🏜️ Sahara Desert</a>
-            <a href="interactive/tour_nile_river_ridge.html">🌊 Nile River</a>
-            <a href="interactive/tour_amazon_basin_valley.html">🌳 Amazon Basin</a>
-            <a href="interactive/tour_australian_outback.html">🦘 Australian Outback</a>
-            <a href="interactive/tour_java_population_ridge.html">🌴 Java Island</a>
-            <a href="interactive/tour_trans_siberian_corridor.html">🚂 Trans-Siberian</a>
-        </div>
-    </div>
-
+    </footer>
 </body>
 </html>

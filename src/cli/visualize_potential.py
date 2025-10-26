@@ -98,6 +98,11 @@ def main():
     parser.add_argument('--width', type=int, help='Plot width in pixels (default: 1400 for scatter, 1200 for surface)')
     parser.add_argument('--height', type=int, help='Plot height in pixels (default: 900 for scatter, 800 for surface)')
 
+    # High-quality rendering options
+    parser.add_argument('--hq', action='store_true', help='High-quality mode (1920x1080, aspectmode=data, custom lighting)')
+    parser.add_argument('--aspectmode', choices=['auto', 'data', 'manual'], default='auto',
+                        help='Aspect ratio mode (auto uses manual for mesh/surface, data for HQ mode)')
+
     args = parser.parse_args()
 
     # Load CSV
@@ -122,11 +127,22 @@ def main():
         ext = 'png' if args.png else 'html'
         args.output = str(input_path.parent / f"{input_path.stem}_{args.type}.{ext}")
 
-    # Set default width/height based on type
-    if args.width is None:
-        args.width = 1400 if args.type == 'scatter' else 1200
-    if args.height is None:
-        args.height = 900 if args.type == 'scatter' else 800
+    # Handle HQ mode
+    if args.hq:
+        if args.width is None:
+            args.width = 1920
+        if args.height is None:
+            args.height = 1080
+        if args.aspectmode == 'auto':
+            args.aspectmode = 'data'
+    else:
+        # Set default width/height based on type
+        if args.width is None:
+            args.width = 1400 if args.type == 'scatter' else 1200
+        if args.height is None:
+            args.height = 900 if args.type == 'scatter' else 800
+        if args.aspectmode == 'auto':
+            args.aspectmode = 'manual'
 
     # Create visualization
     print(f"\nCreating {args.type} plot...")
@@ -164,7 +180,9 @@ def main():
             z_scale=args.z_scale,
             z_mode=args.z_mode,
             width=args.width,
-            height=args.height
+            height=args.height,
+            aspectmode=args.aspectmode,
+            hq=args.hq
         )
 
     # Save

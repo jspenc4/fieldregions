@@ -272,7 +272,7 @@ def create_surface_3d(lons, lats, potentials, title="Population Potential Field"
 
 def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
                    colorscale='Jet', color_mode='linear', z_scale=0.10, z_mode='linear',
-                   width=1200, height=800):
+                   width=1200, height=800, aspectmode='manual', hq=False):
     """
     Create 3D mesh plot (Delaunay triangulation) of potential field.
 
@@ -284,8 +284,11 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
         colorscale: Plotly colorscale name (default: 'Jet')
         color_mode: 'linear' or 'log' (default: 'linear')
         z_scale: Height as fraction of horizontal span (default: 0.10 = 10%)
+        z_mode: 'linear' or 'log' for z-axis scaling (default: 'linear')
         width: Plot width in pixels (default: 1200)
         height: Plot height in pixels (default: 800)
+        aspectmode: 'manual' or 'data' (default: 'manual')
+        hq: High-quality mode with custom lighting (default: False)
 
     Returns:
         plotly.graph_objects.Figure
@@ -312,8 +315,14 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
         colorbar_title = "Potential"
         tickformat = ',.0f'
 
+    # Set lighting based on HQ mode
+    if hq:
+        lighting = dict(ambient=0.3, diffuse=0.9, specular=0.5)
+    else:
+        lighting = None
+
     # Create mesh with Delaunay triangulation
-    fig = go.Figure(data=[go.Mesh3d(
+    mesh_params = dict(
         x=lons,
         y=lats,
         z=z_values,
@@ -326,24 +335,55 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
         hovertemplate='Lon: %{x:.2f}<br>Lat: %{y:.2f}<br>Potential: %{customdata:,.0f}<extra></extra>',
         customdata=potentials,
         flatshading=False
-    )])
+    )
 
-    fig.update_layout(
-        title=title,
-        scene=dict(
-            xaxis_title='Longitude',
-            yaxis_title='Latitude',
-            zaxis_title='Potential (normalized)',
-            camera=dict(
-                eye=dict(x=0.0, y=-2.5, z=1.5),  # North-facing: look from south
-                center=dict(x=0, y=0, z=-0.1)
-            ),
-            aspectmode='manual',
-            aspectratio=dict(x=aspect_x, y=aspect_y, z=aspect_z)
+    if lighting is not None:
+        mesh_params['lighting'] = lighting
+
+    # In HQ mode, optionally hide hover and colorbar
+    if hq:
+        mesh_params['showscale'] = False
+        mesh_params['hoverinfo'] = 'skip'
+
+    fig = go.Figure(data=[go.Mesh3d(**mesh_params)])
+
+    # Build scene dict
+    scene_dict = dict(
+        xaxis=dict(title='Longitude (°)'),
+        yaxis=dict(title='Latitude (°)'),
+        zaxis=dict(title='Potential (normalized)' if not hq else ''),
+        camera=dict(
+            eye=dict(x=0.0, y=-2.5, z=1.5) if not hq else dict(x=0, y=-2.0, z=0.8)
         ),
+        aspectmode=aspectmode
+    )
+
+    # Only add aspectratio if using manual mode
+    if aspectmode == 'manual':
+        scene_dict['aspectratio'] = dict(x=aspect_x, y=aspect_y, z=aspect_z)
+
+    # HQ mode customizations
+    if hq:
+        scene_dict['bgcolor'] = 'white'
+        scene_dict['xaxis']['showgrid'] = True
+        scene_dict['xaxis']['visible'] = True
+        scene_dict['yaxis']['showgrid'] = True
+        scene_dict['yaxis']['visible'] = True
+        scene_dict['zaxis']['showgrid'] = False
+        scene_dict['zaxis']['visible'] = False
+
+    layout_params = dict(
+        title=title,
+        scene=scene_dict,
         width=width,
         height=height,
         margin=dict(l=0, r=0, b=0, t=40)
     )
+
+    if hq:
+        layout_params['paper_bgcolor'] = 'white'
+        layout_params['showlegend'] = False
+
+    fig.update_layout(**layout_params)
 
     return fig
