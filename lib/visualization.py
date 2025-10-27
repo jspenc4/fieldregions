@@ -270,9 +270,101 @@ def create_surface_3d(lons, lats, potentials, title="Population Potential Field"
     return fig
 
 
+def calculate_gradient_direction(lons, lats, potentials, n_neighbors=10):
+    """
+    Calculate direction of steepest descent at each point.
+
+    Args:
+        lons: Longitude values
+        lats: Latitude values
+        potentials: Potential values
+        n_neighbors: Number of neighbors to use for gradient estimation
+
+    Returns:
+        angles: Direction in degrees (0=East, 90=North, 180=West, 270=South)
+    """
+    from scipy.spatial import cKDTree
+
+    print(f"  Calculating gradient direction using {n_neighbors} neighbors...")
+
+    # Build KD-tree for nearest neighbor search
+    coords = np.column_stack((lons, lats))
+    tree = cKDTree(coords)
+
+    angles = np.zeros(len(lons))
+
+    for i in range(len(lons)):
+        # Find nearest neighbors
+        distances, indices = tree.query(coords[i], k=n_neighbors+1)
+        # Skip first index (self)
+        neighbor_indices = indices[1:]
+
+        # Calculate gradient using neighbors
+        neighbor_lons = lons[neighbor_indices]
+        neighbor_lats = lats[neighbor_indices]
+        neighbor_pots = potentials[neighbor_indices]
+
+        # Estimate gradient using weighted average of neighbor differences
+        delta_lon = neighbor_lons - lons[i]
+        delta_lat = neighbor_lats - lats[i]
+        delta_pot = neighbor_pots - potentials[i]
+
+        # Weight by inverse distance
+        weights = 1.0 / (distances[1:] + 1e-10)
+        weights = weights / weights.sum()
+
+        # Gradient components (note: negative for descent direction)
+        grad_lon = -np.sum(weights * delta_pot * delta_lon / (distances[1:]**2 + 1e-10))
+        grad_lat = -np.sum(weights * delta_pot * delta_lat / (distances[1:]**2 + 1e-10))
+
+        # Convert to angle (0=East, 90=North, counterclockwise)
+        angle = np.arctan2(grad_lat, grad_lon) * 180 / np.pi
+        angles[i] = angle
+
+    return angles
+
+
+def compass_direction_to_color(angles):
+    """
+    Map compass angles to 4 discrete colors for AMS printing.
+
+    North (315-45°): Blue
+    East (45-135°): Cyan
+    South (135-225°): Yellow
+    West (225-315°): Red/Orange
+
+    Args:
+        angles: Direction in degrees (0=East, 90=North)
+
+    Returns:
+        color_indices: Integer 0-3 for each point
+        colorscale: Discrete colorscale for plotting
+    """
+    # Normalize angles to 0-360
+    angles_norm = (angles + 360) % 360
+
+    # Assign to quadrants (with North centered at 0/360)
+    # North: 315-45° → rotate by 45 so North is at 0
+    rotated = (angles_norm + 45) % 360
+    color_indices = (rotated // 90).astype(int)
+
+    # Colors: 0=North(Blue), 1=East(Cyan), 2=South(Yellow), 3=West(Red)
+    colors = ['#00224e', '#00bfb3', '#fdc328', '#f1605d']  # blue, cyan, yellow, red
+
+    # Build discrete colorscale for plotly (maps 0-3 to colors)
+    colorscale = []
+    for i in range(4):
+        start = i / 4
+        end = (i + 1) / 4
+        colorscale.append([start, colors[i]])
+        colorscale.append([end, colors[i]])
+
+    return color_indices, colorscale
+
+
 def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
                    colorscale='Jet', color_mode='linear', z_scale=0.10, z_mode='linear',
-                   width=1200, height=800, aspectmode='manual', hq=False):
+                   width=1200, height=800, aspectmode='manual', hq=False, color_by_gradient=False):
     """
     Create 3D mesh plot (Delaunay triangulation) of potential field.
 
@@ -289,6 +381,7 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
         height: Plot height in pixels (default: 800)
         aspectmode: 'manual' or 'data' (default: 'manual')
         hq: High-quality mode with custom lighting (default: False)
+        color_by_gradient: Color by direction of steepest descent instead of potential (default: False)
 
     Returns:
         plotly.graph_objects.Figure
@@ -306,7 +399,21 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
     z_values = z_potentials * z_norm
 
     # Determine intensity values for coloring
-    if color_mode == 'log':
+    if color_by_gradient:
+        # Calculate gradient direction
+        angles = calculate_gradient_direction(lons, lats, potentials)
+        color_indices, gradient_colorscale = compass_direction_to_color(angles)
+
+        # Use color indices for intensity (0-3 maps to North/East/South/West)
+        intensity = color_indices
+        colorscale = gradient_colorscale  # Override provided colorscale
+        colorbar_title = "Flow Direction"
+        tickformat = '.0f'
+        print(f"  Color by gradient: {np.sum(color_indices==0)} North, "
+              f"{np.sum(color_indices==1)} East, "
+              f"{np.sum(color_indices==2)} South, "
+              f"{np.sum(color_indices==3)} West")
+    elif color_mode == 'log':
         intensity = np.log10(potentials + 1)
         colorbar_title = "Log10(Potential)"
         tickformat = '.2f'

@@ -83,6 +83,8 @@ def main():
                         help='Color scaling mode')
     parser.add_argument('--discrete-colors', type=int, metavar='N',
                         help='Use N discrete color bands (e.g., 4 for 3D printing). Overrides colorscale with percentile-based bands.')
+    parser.add_argument('--color-by-gradient', action='store_true',
+                        help='Color by direction of steepest descent (North=Blue, East=Cyan, South=Yellow, West=Red). Useful for 3D printing where height already shows magnitude.')
     parser.add_argument('--marker-size', type=float, default=3.0,
                         help='Scatter plot marker size (scatter only)')
     parser.add_argument('--z-scale', type=float, default=0.08,
@@ -209,7 +211,8 @@ def main():
             width=args.width,
             height=args.height,
             aspectmode=args.aspectmode,
-            hq=args.hq
+            hq=args.hq,
+            color_by_gradient=args.color_by_gradient
         )
 
     # Save
