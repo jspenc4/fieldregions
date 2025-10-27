@@ -783,4 +783,62 @@ Inspiration from:
 
 ---
 
+## Maximum Distance Calculation from Region Boundaries (2025-01-26)
+
+### The Goal
+
+Instead of using arbitrary max_distance values (50 miles, 100 miles, etc.), calculate the theoretically correct maximum distance from the region's actual boundaries or grid extent.
+
+### The Idea
+
+**"One calculation to rule them all"** - compute population potential once with the correct max_distance derived from the data itself, then reuse that result forever without recalculating.
+
+### Implementation Approaches
+
+**For grid data (easy):**
+```python
+# Calculate bounding box diagonal
+lon_span = max_lon - min_lon
+lat_span = max_lat - min_lat
+max_distance = haversine(min_lat, min_lon, max_lat, max_lon)
+
+# Or half-diagonal for "influence radius"
+max_distance = max_possible_distance / 2
+```
+
+**For census tract data (hard):**
+- Scattered points with irregular shapes
+- Bounding box is conservative (includes empty space)
+- **Option 1**: Use bounding box anyway (simple, safe)
+- **Option 2**: Calculate convex hull, use hull diagonal (complex, accurate)
+- **Option 3**: Use shapefile boundaries if available (requires GIS processing)
+- **Option 4**: Use empirical 99.9th percentile of actual distances
+
+**For global consistency:**
+- Alternative: Skip max_distance entirely for canonical calculation
+- Let all contributions be included, even if tiny
+- Results in "true" global potential field
+- Can always filter/smooth later as needed
+- Slow but only needs to run once
+
+### Trade-offs
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| No max_distance | Theoretically pure; single canonical result | Slowest; includes negligible contributions |
+| Bounding box | Easy; works for grids | Conservative; includes empty space |
+| Convex hull | More accurate for irregular shapes | Complex; requires shapefile processing |
+| Fixed large value | Simple; fast enough | Arbitrary; different for each region |
+
+### Status
+
+**Parked** - Possibly YAGNI (You Ain't Gonna Need It). Current approach with reasonable fixed cutoffs (100 miles, 500 miles, etc.) works well enough. Unclear if the added complexity of "perfect" max_distance calculation provides meaningful benefit.
+
+Could revisit if:
+- Need to compare results across wildly different regions
+- Want single "authoritative" calculation for publications
+- Discover that arbitrary cutoffs are affecting results
+
+---
+
 *End of speculative section. These ideas are works in progress. Some may be profound, some may be nonsense. Time will tell.*

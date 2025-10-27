@@ -78,9 +78,11 @@ def main():
 
     # Appearance
     parser.add_argument('--colorscale', default='Jet',
-                        help='Plotly colorscale name (Jet, Viridis, Plasma, etc.)')
+                        help='Plotly colorscale name (Jet, Viridis, Plasma, Cividis, etc.)')
     parser.add_argument('--color-mode', choices=['linear', 'log'], default='linear',
                         help='Color scaling mode')
+    parser.add_argument('--discrete-colors', type=int, metavar='N',
+                        help='Use N discrete color bands (e.g., 4 for 3D printing). Overrides colorscale with percentile-based bands.')
     parser.add_argument('--marker-size', type=float, default=3.0,
                         help='Scatter plot marker size (scatter only)')
     parser.add_argument('--z-scale', type=float, default=0.08,
@@ -126,6 +128,31 @@ def main():
         input_path = Path(args.input)
         ext = 'png' if args.png else 'html'
         args.output = str(input_path.parent / f"{input_path.stem}_{args.type}.{ext}")
+
+    # Handle discrete colors
+    if args.discrete_colors:
+        print(f"  Using {args.discrete_colors} discrete color bands")
+        # Create discrete colorscale based on --colorscale base
+        # Default to Cividis-like 4-color for 3D printing
+        if args.discrete_colors == 4:
+            base_colors = ['#00224e', '#00bfb3', '#fdc328', '#f1605d']  # Dark blue, cyan, yellow, red
+        else:
+            # Generate N evenly spaced colors from the base colorscale
+            # This is a fallback - may not look great
+            import plotly.express as px
+            base_colors = px.colors.sample_colorscale(args.colorscale, args.discrete_colors)
+
+        # Build discrete scale: each color spans 1/N of the range
+        discrete_scale = []
+        for i in range(args.discrete_colors):
+            start = i / args.discrete_colors
+            end = (i + 1) / args.discrete_colors
+            color = base_colors[i]
+            discrete_scale.append([start, color])
+            discrete_scale.append([end, color])
+
+        # Override the colorscale argument
+        args.colorscale = discrete_scale
 
     # Handle HQ mode
     if args.hq:
