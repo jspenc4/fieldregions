@@ -322,10 +322,18 @@ def create_mesh_3d(lons, lats, potentials, title="Population Potential Field",
         lighting = None
 
     # Create mesh with Delaunay triangulation
+    from scipy.spatial import Delaunay
+    print("  Building Delaunay triangulation...")
+    tri = Delaunay(np.column_stack((lons, lats)))
+    print(f"  {len(tri.simplices):,} triangles")
+
     mesh_params = dict(
         x=lons,
         y=lats,
         z=z_values,
+        i=tri.simplices[:, 0],
+        j=tri.simplices[:, 1],
+        k=tri.simplices[:, 2],
         intensity=intensity,
         colorscale=colorscale,
         colorbar=dict(

@@ -215,6 +215,7 @@ def main():
     # Save
     print(f"Saving to {args.output}...")
     if args.png:
+        # Don't use scale parameter - let Plotly handle it naturally
         fig.write_image(args.output, width=args.width, height=args.height)
         print(f"\nDone! View: open {args.output}")
     else:
