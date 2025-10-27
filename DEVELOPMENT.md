@@ -2,6 +2,42 @@
 
 This document contains important information for working on this project.
 
+## Project Roadmap
+
+**Current Focus:** Rebuilding the spanning tree / auction algorithm from scratch in Python.
+
+### The Three Programs
+
+1. **Potential Field Calculator** ✅ COMPLETE
+   - Calculates and visualizes population potential fields (1/d³)
+   - Python with NumPy vectorization
+   - Used for 3D printing and cool visualizations
+
+2. **Auction/Merger Algorithm** 🚧 TO BE REBUILT
+   - Hierarchical clustering via force auction (1/d⁴)
+   - Currently: Java implementation (works but untested/unmaintainable)
+   - Goal: Rebuild in Python from first principles with proper tests
+   - See: `docs/spanning_tree_roadmap.md` for detailed plan
+
+3. **Hierarchy Evaluator** 🎯 TO BE CREATED
+   - Extracts core/independent/isolated regions from merge sequence
+   - Python for CSV/tree analysis
+   - See: `docs/hierarchy_extraction.md` for algorithm details
+
+### Quick Links
+
+- **[Spanning Tree Roadmap](docs/spanning_tree_roadmap.md)** - Multi-week plan for rebuilding programs #2 and #3
+- **[Hierarchy Extraction](docs/hierarchy_extraction.md)** - Algorithm for extracting regional structure
+- **[Algorithm Summary](docs/algorithm_summary.md)** - Force law, scale invariance, the auction
+
+### Key Data Files
+
+- `res/15sec_218500_world_results.csv` - World merge sequence (218k merges)
+- `res/world tree.docx` - Manual hierarchy extraction (ground truth)
+- Visual maps: `res/74k_us.pdf`, `~/Desktop/worldReddit.png`, `~/Desktop/usa 6 region.jpg`
+
+---
+
 ## Python Virtual Environment
 
 **IMPORTANT**: This project uses a Python virtual environment located in `venv/`.
