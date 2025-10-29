@@ -312,6 +312,57 @@
         </div>
 
         <div class="section">
+            <h2>County-Level Resolution: Dutchess County, NY</h2>
+
+            <div class="viz-grid">
+                <div class="viz-card">
+                    <img src="images/hudson_river_view.png" alt="Dutchess County from Hudson River" onerror="this.style.display='none'">
+                    <div class="content">
+                        <h3>Census Block Resolution</h3>
+                        <p>
+                            4,121 census blocks with 0.25 mile smoothing. View from the west shows cities
+                            rising from the Hudson River valley—revealing centuries of settlement patterns
+                            in a single visualization.
+                        </p>
+                        <a href="interactive/dutchess_blocks.html" class="btn">Explore Interactive 3D</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="findings">
+                <h3>Identifiable Population Centers</h3>
+                <p>
+                    The visualization reveals individual towns and villages with remarkable clarity.
+                    Along the Route 9 corridor (Hudson River valley):
+                </p>
+                <ul>
+                    <li><strong>Poughkeepsie</strong> - County seat, dominant peak (potential ~420K)</li>
+                    <li><strong>Hyde Park</strong> - Secondary peak just north of Poughkeepsie</li>
+                    <li><strong>Wappingers Falls</strong> - Distinct peak between the larger cities</li>
+                    <li><strong>Fishkill</strong> - Smaller peak south of Wappingers Falls</li>
+                    <li><strong>Beacon</strong> - Major city at southern county boundary</li>
+                </ul>
+                <p style="margin-top: 15px;">
+                    Rural villages appear as isolated peaks in the eastern and northern county:
+                </p>
+                <ul>
+                    <li><strong>Red Hook</strong> and <strong>Rhinebeck</strong> - Colonial-era villages (northwest)</li>
+                    <li><strong>Millbrook</strong>, <strong>Pawling</strong>, and <strong>Amenia</strong> - Eastern hamlets standing out from low-density surroundings</li>
+                </ul>
+            </div>
+
+            <div class="insight-box" style="margin-top: 30px;">
+                <h3>Multi-Scale Consistency</h3>
+                <p>
+                    The same 1/d³ formula works from global analysis (identifying the Nile Valley and Java)
+                    down to county-level detail (individual villages). Scale invariance means the algorithm
+                    naturally handles census blocks, block groups, tracts, and gridded data in the same run—no
+                    resolution-dependent tuning required.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
             <h2>Methodology & Theory</h2>
 
             <div class="findings">

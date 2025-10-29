@@ -235,6 +235,14 @@ def create_surface_3d(lons, lats, potentials, title="Population Potential Field"
         colorbar_title = "Potential"
         tickformat = ',.0f'
 
+    # Constrain color range to actual data (exclude interpolation artifacts)
+    if color_mode == 'log':
+        cmin = np.log10(np.percentile(potentials, 5) + 1)
+        cmax = np.log10(np.percentile(potentials, 99.5) + 1)
+    else:
+        cmin = np.percentile(potentials, 5)
+        cmax = np.percentile(potentials, 99.5)
+
     # Create surface plot
     fig = go.Figure(data=[go.Surface(
         x=grid_lon_mesh,
@@ -242,11 +250,14 @@ def create_surface_3d(lons, lats, potentials, title="Population Potential Field"
         z=grid_z,
         surfacecolor=surfacecolor,
         colorscale=colorscale,
+        cmin=cmin,
+        cmax=cmax,
         colorbar=dict(
             title=colorbar_title,
             tickformat=tickformat
         ),
-        hovertemplate='Lon: %{x:.2f}<br>Lat: %{y:.2f}<br>Potential: %{surfacecolor:,.0f}<extra></extra>'
+        customdata=grid_potential,
+        hovertemplate='Lon: %{x:.4f}<br>Lat: %{y:.4f}<br>Potential: %{customdata:,.0f}<extra></extra>'
     )])
 
     fig.update_layout(
