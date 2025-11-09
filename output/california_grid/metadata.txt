@@ -1,8 +1,0 @@
-census_points: 8836
-infill_points: 106298
-total_points: 115134
-triangles: 229287
-triangle_centers: 229287
-buffer_degrees: 0.5
-grid_spacing_miles: 2.0
-min_infill_distance_miles: 2.0

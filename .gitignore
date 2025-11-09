@@ -49,3 +49,4 @@ censusBlockGroupResults.csv
 !res/*.pdf
 !res/*_preview.jpg
 output/
+logs/
